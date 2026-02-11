@@ -1,13 +1,19 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
-import { Button } from "react-native-web";
+
+import React, { useState } from "react";
+import { StyleSheet, View } from "react-native";
+import Login from "./Front-end/src/screens/Login";
+import RecordingPage from "./Front-end/src/screens/RecordingPage";
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false); 
+
   return (
     <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-      <Button title="Pulsa Aqui" onPress={() => alert("Hola")} />
+      {isLoggedIn ? (
+        <RecordingPage />
+      ) : (
+        <Login onLogin={() => setIsLoggedIn(true)} />
+      )}
     </View>
   );
 }
