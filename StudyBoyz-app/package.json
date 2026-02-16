@@ -1,5 +1,4 @@
 {
-  
   "name": "studyboyz-app",
   "version": "1.0.0",
   "main": "index.js",
@@ -12,6 +11,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
+    "@expo/vector-icons": "^15.0.3",
     "expo": "~54.0.33",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
