@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StudyBoys - Inicio</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <div class="fecha">Fecha</div>
+                <div class="saludo">Hola, Estudiante</div>
+            </div>
+            <div class="perfil">
+    <img src="imagenes/usuario.png" alt="Perfil" style="width: 42px; height: 42px; 
+    border-radius: 50%; border: 2px solid #133951; object-fit: cover;">
+</div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-numero">5</div>
+                <div class="stat-label">Materias</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-numero">12</div>
+                <div class="stat-label">Grabaciones</div>
+            </div>
+        </div>
+
+        <!-- Botón de grabación -->
+<div class="boton-grabar">
+    <div class="icono-microfono"></div>
+    <div class="titulo">Nueva Grabación</div>
+    <div class="subtitulo">Toque para iniciar</div>
+</div>
+
+        <!-- Separador -->
+        <div class="separator"></div>
+
+        <!-- Sección Notas Recientes -->
+        <div class="notas-section">
+            <div class="section-header">
+                <div class="section-titulo">Notas Recientes</div>
+                <a href="#" class="ver-todo">Ver todas</a>
+            </div>
+
+            <!-- Nota 1 -->
+            <div class="nota-card">
+                <div class="nota-color" style="background: #BD5C00;"></div>
+                <div class="nota-content">
+                    <div class="nota-titulo">Matemáticas</div>
+                    <div class="nota-meta">
+                        <span>
+                <img src="imagenes/reloj.png" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+               45 min • Hace 2 horas
+            </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nota 2 -->
+            <div class="nota-card">
+    <div class="nota-color" style="background: #133951;"></div>
+    <div class="nota-content">
+        <div class="nota-titulo">Física</div>
+        <div class="nota-meta">
+            <span>
+                <img src="imagenes/reloj.png" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+                1h 20m • Ayer
+            </span>
+        </div>
+    </div>
+</div>
+
+            <!-- Nota 3 -->
+            <div class="nota-card">
+                <div class="nota-color" style="background: #15694d;"></div>
+                <div class="nota-content">
+                    <div class="nota-titulo">Química</div>
+                    <div class="nota-meta">
+                        
+                        <span><img src="imagenes/reloj.png" width="16" height="16" style="display: inline-block; vertical-align: middle; margin-right: 5px;">
+                 50 min • 22 Oct</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+       <!-- Barra de navegación inferior -->
+<div class="nav-bar">
+    <div class="nav-item active">
+        <div class="nav-icon">
+            <img src="imagenes/hogar.png" alt="Inicio" style="width: 24px; height: 24px;">
+        </div>
+        <div>Inicio</div>
+    </div>
+    <div class="nav-item">
+        <div class="nav-icon">
+            <img src="imagenes/microfono-circular.png" alt="Grabar" style="width: 24px; height: 24px;">
+        </div>
+        <div>Grabar</div>
+    </div>
+    <div class="nav-item">
+        <div class="nav-icon">
+            <img src="imagenes/libro-cubierta-abierta.png" alt="Materias" style="width: 24px; height: 24px;">
+        </div>
+        <div>Materias</div>
+    </div>
+    <div class="nav-item">
+        <div class="nav-icon">
+            <img src="imagenes/notas.png    " alt="Nota" style="width: 24px; height: 24px;">
+        </div>
+        <div>Nota</div>
+    </div>
+    <div class="nav-item">
+        <div class="nav-icon">
+            <img src="imagenes/ajustes.png" alt="Ajustes" style="width: 24px; height: 24px;">
+        </div>
+        <div>Ajustes</div>
+    </div>
+</div>
+
+    <script>
+        // Script opcional para dar funcionalidad
+        document.querySelector('.boton-grabar').addEventListener('click', function() {
+            alert('Ir a pantalla de grabación');
+        });
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelector('.nav-item.active').classList.remove('active');
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>
