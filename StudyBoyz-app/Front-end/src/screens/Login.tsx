@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 type Props = {
-  onLogin: (username: string) => void;
+  onLogin: () => void;
 };
 
 export default function Login({ onLogin }: Props) {
@@ -10,7 +10,7 @@ export default function Login({ onLogin }: Props) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    onLogin(username || "guest");
+    onLogin();
   }
 
   return (
