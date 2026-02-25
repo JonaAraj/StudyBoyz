@@ -2,7 +2,6 @@
   "name": "studyboyz-app",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -12,12 +11,23 @@
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "@expo/vector-icons": "^15.0.3",
+    "@react-navigation/bottom-tabs": "^7.14.0",
+    "@react-navigation/native": "^7.1.28",
+    "@react-navigation/native-stack": "^7.13.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.3.1",
     "expo": "~54.0.33",
     "expo-status-bar": "~3.0.9",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "pg": "^8.18.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
-    "react-native-web": "^0.21.0"
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-screens": "^4.23.0",
+    "react-native-web": "^0.21.0",
+    "sequelize": "^6.37.7"
   },
   "private": true,
   "devDependencies": {
