@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import Login from "./Front-end/src/screens/Login";
 import RecordingPage from "./Front-end/src/screens/RecordingPage";
 import { Subject } from "./Front-end/src/screens/Subjects";
+import Settings from "./Front-end/src/screens/Settings";
 
 
 export default function App() {
@@ -12,12 +13,12 @@ export default function App() {
   return (
 
     <View style={styles.container}>
-      {/*<Subject />}*/}
-      {isLoggedIn ? (
+      {<Settings />}
+      {/*isLoggedIn ? (
         <RecordingPage />
       ) : (
         <Login onLogin={() => setIsLoggedIn(true)} />
-      )}
+      )*/}
     </View>
   );
 }
@@ -26,7 +27,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
