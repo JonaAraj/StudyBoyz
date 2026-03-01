@@ -95,14 +95,6 @@ export const Subject = ({
           <Text style={[styles.tabLabel, styles.activeTabLabel]}>Materias</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={onNavigateToRecording}
-        >
-          <Ionicons name="mic" size={24} color="#8E8E93" />
-          <Text style={styles.tabLabel}>Grabar</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity style={styles.tabItem}>
           <Ionicons name="time" size={24} color="#8E8E93" />
           <Text style={styles.tabLabel}>Recientes</Text>

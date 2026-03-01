@@ -8,12 +8,15 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Configuracion from "./Configuracion";
 
 type RecordingPageProps = {
   onNavigateToSubjects?: () => void;
 };
 
-export default function RecordingPage({ onNavigateToSubjects }: RecordingPageProps) {
+export default function RecordingPage({
+  onNavigateToSubjects,
+}: RecordingPageProps) {
   const [isRecording, setIsRecording] = useState(true);
   const [time, setTime] = useState("00:42:15");
 
@@ -39,9 +42,6 @@ export default function RecordingPage({ onNavigateToSubjects }: RecordingPagePro
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Grabando</Text>
-          <TouchableOpacity style={styles.settingsButton}>
-            <Ionicons name="settings" size={24} color="#333" />
-          </TouchableOpacity>
         </View>
 
         {/* Main Content */}
@@ -132,7 +132,7 @@ export default function RecordingPage({ onNavigateToSubjects }: RecordingPagePro
         {/* Footer */}
         <View style={styles.recordingFooter}>
           <Text style={styles.footerText}>Tiempo de estudio: 00:00:00</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.subjectsButton}
             onPress={onNavigateToSubjects}
           >

@@ -1,4 +1,3 @@
-import React from "react";
 import {
   View,
   ScrollView,
@@ -180,34 +179,6 @@ const Configuracion = ({ onNavigateBack }: ConfiguracionProps) => {
           </Text>
         </View>
       </ScrollView>
-
-      {/* Tab Bar Navigation */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabItem}>
-          <MaterialCommunityIcons name="home" size={24} color="#8E8E93" />
-          <Text style={styles.tabLabel}>Inicio</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabItem}>
-          <MaterialCommunityIcons name="folder" size={24} color="#8E8E93" />
-          <Text style={styles.tabLabel}>Materias</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabItem}>
-          <MaterialCommunityIcons name="microphone" size={24} color="#8E8E93" />
-          <Text style={styles.tabLabel}>Grabar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabItem}>
-          <MaterialCommunityIcons name="history" size={24} color="#8E8E93" />
-          <Text style={styles.tabLabel}>Recientes</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.tabItem, styles.activeTab]}>
-          <MaterialCommunityIcons name="cog" size={24} color="#007AFF" />
-          <Text style={[styles.tabLabel, styles.activeTabLabel]}>Ajustes</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
