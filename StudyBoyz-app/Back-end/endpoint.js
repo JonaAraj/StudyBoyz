@@ -191,4 +191,55 @@ router.post("/auth/logout", requireAuth, (req, res) => {
   });
 });
 
+const Grabacion = require('./models/Grabacion');
+
+// GET /recordings — Grabaciones del usuario autenticado
+router.get('/recordings', requireAuth, async (req, res) => {
+  try {
+    const recordings = await Grabacion.findByUser(req.user.id);
+    res.json({ success: true, recordings });
+  } catch (err) {
+    console.error('[RECORDINGS GET]', err);
+    res.status(500).json({ success: false, message: 'Error al obtener grabaciones.' });
+  }
+});
+
+// PUT /recordings/:id — Editar título y/o materia
+router.put('/recordings/:id', requireAuth, async (req, res) => {
+  try {
+    const { title, subject } = req.body;
+    const updated = await Grabacion.update(req.params.id, req.user.id, { title, subject });
+    res.json({ success: true, recording: updated });
+  } catch (err) {
+    console.error('[RECORDINGS PUT]', err);
+    res.status(500).json({ success: false, message: 'Error al actualizar grabación.' });
+  }
+});
+
+// DELETE /recordings/:id — Eliminar grabación y archivo
+router.delete('/recordings/:id', requireAuth, async (req, res) => {
+  try {
+    const { filePath } = req.body;
+    await Grabacion.delete(req.params.id, req.user.id, filePath);
+    res.json({ success: true, message: 'Grabación eliminada.' });
+  } catch (err) {
+    console.error('[RECORDINGS DELETE]', err);
+    res.status(500).json({ success: false, message: 'Error al eliminar grabación.' });
+  }
+});
+
+// GET /recordings/:id/download — URL de descarga firmada
+router.get('/recordings/:id/download', requireAuth, async (req, res) => {
+  try {
+    const recording = await Grabacion.findByIdAndUser(req.params.id, req.user.id);
+    if (!recording) return res.status(404).json({ success: false, message: 'No encontrada.' });
+
+    const url = await Grabacion.getDownloadUrl(recording.file_path);
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error('[RECORDINGS DOWNLOAD]', err);
+    res.status(500).json({ success: false, message: 'Error al generar URL.' });
+  }
+});
+
 module.exports = router;

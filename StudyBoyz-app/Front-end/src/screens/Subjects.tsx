@@ -13,11 +13,13 @@ import { Ionicons } from "@expo/vector-icons";
 type SubjectsProps = {
   onNavigateToRecording?: () => void;
   onNavigateToConfiguracion?: () => void;
+  onNavigateToRecientes: () => void;
 };
 
 export const Subject = ({
   onNavigateToRecording,
   onNavigateToConfiguracion,
+  onNavigateToRecientes,
 }: SubjectsProps) => {
   interface Subject {
     title: string;
@@ -95,7 +97,10 @@ export const Subject = ({
           <Text style={[styles.tabLabel, styles.activeTabLabel]}>Materias</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.tabItem}>
+        <TouchableOpacity
+          style={styles.tabItem}
+          onPress={onNavigateToRecientes}
+        >
           <Ionicons name="time" size={24} color="#8E8E93" />
           <Text style={styles.tabLabel}>Recientes</Text>
         </TouchableOpacity>

@@ -17,11 +17,10 @@ import {
 import useAuth from "../../hooks/Useauth";
 
 interface LoginProps {
-  onLoginSuccess?: () => void; // Navegar al home tras login
-  onGoToRegister?: () => void; // Navegar a la pantalla de registro
+  onLogin?: () => void; // ← coincide con App.tsx
+  onGoToRegister?: () => void;
 }
-
-const Login: React.FC<LoginProps> = ({ onLoginSuccess, onGoToRegister }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
   const { login, isLoading, error, clearError } = useAuth();
 
   const [identifier, setIdentifier] = useState("");
@@ -41,7 +40,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onGoToRegister }) => {
     const success = await login(identifier.trim(), password);
 
     if (success) {
-      onLoginSuccess?.();
+      onLogin?.();
     }
   };
 

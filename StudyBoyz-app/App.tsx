@@ -4,8 +4,14 @@ import Login from "./Front-end/src/screens/Login";
 import { Subject } from "./Front-end/src/screens/Subjects";
 import RecordingPage from "./Front-end/src/screens/RecordingPage";
 import Configuracion from "./Front-end/src/screens/Configuracion";
+import Recientes from "./Front-end/src/screens/Recientes";
 
-type Screen = "login" | "recording" | "subjects" | "configuracion";
+type Screen =
+  | "login"
+  | "recording"
+  | "subjects"
+  | "configuracion"
+  | "recientes";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
@@ -26,16 +32,22 @@ export default function App() {
     setCurrentScreen("configuracion");
   };
 
+  const navigateToRecientes = () => setCurrentScreen("recientes");
+
   return (
     <View style={styles.container}>
       {currentScreen === "login" && <Login onLogin={handleLogin} />}
       {currentScreen === "recording" && (
         <RecordingPage onNavigateToSubjects={navigateToSubjects} />
       )}
+      {currentScreen === "recientes" && (
+        <Recientes onNavigateToRecording={navigateToRecording} />
+      )}
       {currentScreen === "subjects" && (
         <Subject
           onNavigateToRecording={navigateToRecording}
           onNavigateToConfiguracion={navigateToConfiguracion}
+          onNavigateToRecientes={navigateToRecientes}
         />
       )}
       {currentScreen === "configuracion" && (
