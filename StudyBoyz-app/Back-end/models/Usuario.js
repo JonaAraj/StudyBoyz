@@ -1,46 +1,90 @@
-const { DataTypes } = require("sequelize");
-const sequelize = require("../config/database");
+// ============================================================
+// Usuario.js — Modelo de Usuario
+// Encapsula todas las queries de la tabla "Users"
+// ============================================================
+
+const { supabaseAdmin } = require("../config/supabase");
 const bcrypt = require("bcryptjs");
 
-const Usuario = sequelize.define("Usuario", {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
-  nombre_usuario: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-  },
-  contraseña: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  nombre_completo: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  creado_en: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-  },
-});
+const TABLE = "Users";
 
-// Hook para hashear contraseña antes de guardar
-Usuario.beforeCreate(async (usuario) => {
-  const salt = await bcrypt.genSalt(10);
-  usuario.contraseña = await bcrypt.hash(usuario.contraseña, salt);
-});
+const Usuario = {
+  /**
+   * Busca un usuario por su email
+   * @param {string} email
+   */
+  async findByEmail(email) {
+    const { data, error } = await supabaseAdmin
+      .from(TABLE)
+      .select("*")
+      .eq("Email", email)
+      .single();
 
-// Método para verificar contraseña
-Usuario.prototype.verificarContraseña = async function (contraseña) {
-  return await bcrypt.compare(contraseña, this.contraseña);
+    if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows found
+    return data || null;
+  },
+
+  /**
+   * Busca un usuario por su userName
+   * @param {string} userName
+   */
+  async findByUserName(userName) {
+    const { data, error } = await supabaseAdmin
+      .from(TABLE)
+      .select("*")
+      .eq("userName", userName)
+      .single();
+
+    if (error && error.code !== "PGRST116") throw error;
+    return data || null;
+  },
+
+  /**
+   * Busca un usuario por id
+   * @param {number} id
+   */
+  async findById(id) {
+    const { data, error } = await supabaseAdmin
+      .from(TABLE)
+      .select("id, userName, Email, created_at")
+      .eq("id", id)
+      .single();
+
+    if (error && error.code !== "PGRST116") throw error;
+    return data || null;
+  },
+
+  /**
+   * Crea un nuevo usuario con la contraseña hasheada
+   * @param {{ userName: string, email: string, password: string }}
+   */
+  async create({ userName, email, password }) {
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const { data, error } = await supabaseAdmin
+      .from(TABLE)
+      .insert([
+        {
+          userName,
+          Email: email,
+          password: hashedPassword,
+        },
+      ])
+      .select("id, userName, Email, created_at")
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Verifica si la contraseña en texto plano coincide con el hash guardado
+   * @param {string} plainPassword
+   * @param {string} hashedPassword
+   */
+  async verifyPassword(plainPassword, hashedPassword) {
+    return bcrypt.compare(plainPassword, hashedPassword);
+  },
 };
 
 module.exports = Usuario;

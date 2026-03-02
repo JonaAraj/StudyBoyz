@@ -1,215 +1,244 @@
-import { useState } from "react";
+// ============================================================
+// Login.tsx — Pantalla de Login con integración a authService
+// ============================================================
+
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import useAuth from "../../hooks/Useauth";
 
-type Props = {
-  onLogin: () => void;
-};
+interface LoginProps {
+  onLoginSuccess?: () => void; // Navegar al home tras login
+  onGoToRegister?: () => void; // Navegar a la pantalla de registro
+}
 
-export default function Login({ onLogin }: Props) {
-  const [username, setUsername] = useState("");
+const Login: React.FC<LoginProps> = ({ onLoginSuccess, onGoToRegister }) => {
+  const { login, isLoading, error, clearError } = useAuth();
+
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  function submit() {
-    if (username.trim() && password.trim()) {
-      onLogin();
+  const handleLogin = async () => {
+    if (!identifier.trim() || !password.trim()) {
+      Alert.alert(
+        "Campos requeridos",
+        "Por favor ingresa tu usuario/email y contraseña.",
+      );
+      return;
     }
-  }
+
+    clearError();
+    const success = await login(identifier.trim(), password);
+
+    if (success) {
+      onLoginSuccess?.();
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-      >
-        <View style={styles.wrap}>
-          <View style={styles.header}>
-            <Text style={styles.welcomeTitle}>¡Bienvenido!</Text>
-            <Text style={styles.subtitle}>Inicia sesión en StudyBoyz</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <View style={styles.content}>
+        {/* Título */}
+        <Text style={styles.title}>¡Bienvenido!</Text>
+        <Text style={styles.subtitle}>Inicia sesión en StudyBoyz</Text>
+
+        {/* Error message */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        {/* Formulario */}
+        <View style={styles.card}>
+          {/* Campo usuario/email */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>👤</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Usuario o Email"
+              placeholderTextColor="#aaa"
+              value={identifier}
+              onChangeText={setIdentifier}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
           </View>
 
-          <View style={styles.form}>
-            {/* Username Input */}
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color="#666"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                placeholder="Usuario"
-                value={username}
-                onChangeText={setUsername}
-                style={styles.input}
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color="#666"
-                style={styles.inputIcon}
-              />
-              <TextInput
-                placeholder="Contraseña"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                style={styles.input}
-                placeholderTextColor="#999"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeIcon}
-              >
-                <Ionicons
-                  name={showPassword ? "eye" : "eye-off"}
-                  size={20}
-                  color="#666"
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Login Button */}
-            <TouchableOpacity
-              style={[
-                styles.button,
-                { opacity: username && password ? 1 : 0.6 },
-              ]}
-              onPress={submit}
-              disabled={!username || !password}
-            >
-              <Text style={styles.buttonText}>Iniciar Sesión</Text>
-            </TouchableOpacity>
-
-            {/* Forgot Password Link */}
-            <TouchableOpacity style={styles.forgotContainer}>
-              <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+          {/* Campo contraseña */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputIcon}>🔒</Text>
+            <TextInput
+              style={[styles.input, styles.inputFlex]}
+              placeholder="Contraseña"
+              placeholderTextColor="#aaa"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Sign Up Link */}
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>¿No tienes cuenta? </Text>
-            <TouchableOpacity>
-              <Text style={styles.signupLink}>Regístrate aquí</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Botón de login */}
+          <TouchableOpacity
+            style={[
+              styles.loginButton,
+              isLoading && styles.loginButtonDisabled,
+            ]}
+            onPress={handleLogin}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Olvidaste contraseña */}
+          <TouchableOpacity style={styles.forgotButton}>
+            <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+        {/* Registro */}
+        <TouchableOpacity onPress={onGoToRegister} style={styles.registerRow}>
+          <Text style={styles.registerText}>¿No tienes cuenta? </Text>
+          <Text style={styles.registerLink}>Regístrate aquí</Text>
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#f0f2f5",
   },
-  keyboardView: {
-    flex: 1,
-  },
-  wrap: {
+  content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
   },
-  header: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  welcomeTitle: {
+  title: {
     fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 8,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
     color: "#666",
+    marginBottom: 32,
   },
-  form: {
+  errorBox: {
+    backgroundColor: "#ffeeee",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
     width: "100%",
-    maxWidth: 320,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 5,
+    maxWidth: 380,
+    borderLeftWidth: 3,
+    borderLeftColor: "#e74c3c",
   },
-  inputContainer: {
+  errorText: {
+    color: "#c0392b",
+    fontSize: 13,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 380,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#e0e0e0",
-    borderRadius: 8,
-    marginBottom: 16,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    backgroundColor: "#f8f8f8",
+    marginBottom: 14,
+    backgroundColor: "#fafafa",
+    height: 48,
   },
   inputIcon: {
+    fontSize: 16,
     marginRight: 8,
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: "#333",
+    fontSize: 15,
+    color: "#1a1a1a",
+  },
+  inputFlex: {
+    flex: 1,
   },
   eyeIcon: {
-    padding: 8,
+    fontSize: 16,
+    paddingLeft: 8,
   },
-  button: {
-    backgroundColor: "#2563eb",
-    paddingVertical: 12,
-    borderRadius: 8,
+  loginButton: {
+    backgroundColor: "#6b8de3",
+    borderRadius: 10,
+    height: 48,
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
-  buttonText: {
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
+  loginButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
-  forgotContainer: {
+  forgotButton: {
+    marginTop: 14,
     alignItems: "center",
-    marginTop: 16,
   },
   forgotText: {
-    color: "#2563eb",
-    fontSize: 14,
+    color: "#6b8de3",
+    fontSize: 13,
   },
-  signupContainer: {
+  registerRow: {
     flexDirection: "row",
-    justifyContent: "center",
     marginTop: 24,
   },
-  signupText: {
+  registerText: {
     color: "#666",
     fontSize: 14,
   },
-  signupLink: {
-    color: "#2563eb",
+  registerLink: {
+    color: "#6b8de3",
     fontSize: 14,
     fontWeight: "600",
   },
 });
+
+export default Login;
