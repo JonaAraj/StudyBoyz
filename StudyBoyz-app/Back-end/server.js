@@ -5,6 +5,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const os = require("os");
 const authRoutes = require("./endpoint");
 
 const app = express();
@@ -44,7 +45,23 @@ app.use((err, req, res, next) => {
 
 // ── Start ────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`✅ StudyBoyz API corriendo en http://localhost:${PORT}`);
+  // Lógica para encontrar la IP local de tu PC
+  const interfaces = os.networkInterfaces();
+  let serverIP = "localhost";
+
+  Object.keys(interfaces).forEach((ifname) => {
+    interfaces[ifname].forEach((iface) => {
+      if (iface.family === "IPv4" && !iface.internal) {
+        serverIP = iface.address;
+      }
+    });
+  });
+
+  console.log(`✅ Servidor corriendo.`);
+  console.log(`💻 Local:   http://localhost:${PORT}`);
+  console.log(
+    `📱 Móvil:   http://${serverIP}:${PORT}  <-- USA ESTA IP EN EL FRONTEND`,
+  );
 });
 
 module.exports = app;

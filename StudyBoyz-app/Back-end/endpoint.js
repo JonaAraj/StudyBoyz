@@ -6,6 +6,12 @@
 // POST /auth/logout   — Cerrar sesión (client-side token removal)
 // ============================================================
 
+const Grabacion = require("./models/Grabacion");
+const { supabaseAdmin } = require("./config/supabase");
+
+const Materia = require("./models/Materia");
+const { upload, transcribeInBackground } = require("./transcriptionEndPoints");
+
 const express = require("express");
 const router = express.Router();
 const Usuario = require("./models/Usuario");
@@ -15,6 +21,41 @@ const { generateToken, requireAuth } = require("./middleware/auth");
 // POST /auth/register
 // Body: { userName, email, password }
 // ------------------------------------------------------------
+router.get("/materias", requireAuth, async (req, res) => {
+  try {
+    const materias = await Materia.findByUser(req.user.id);
+    res.json({ success: true, materias });
+  } catch (err) {
+    console.error("[MATERIAS GET]", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Error al obtener materias." });
+  }
+});
+
+router.post(
+  "/recordings/save",
+  requireAuth,
+  upload.single("audio"),
+  async (req, res) => {
+    try {
+      const { title, subject } = req.body;
+      const file = req.file;
+      // Lógica de guardado y transcripción
+      transcribeInBackground(file, req.user.id, title, subject);
+      res.json({
+        success: true,
+        message: "Grabación recibida y procesando transcripción.",
+      });
+    } catch (err) {
+      console.error("[RECORDINGS SAVE]", err);
+      res
+        .status(500)
+        .json({ success: false, message: "Error al guardar grabación." });
+    }
+  },
+);
+
 router.post("/auth/register", async (req, res) => {
   try {
     const { userName, email, password } = req.body;
@@ -191,54 +232,67 @@ router.post("/auth/logout", requireAuth, (req, res) => {
   });
 });
 
-const Grabacion = require('./models/Grabacion');
-
 // GET /recordings — Grabaciones del usuario autenticado
-router.get('/recordings', requireAuth, async (req, res) => {
+router.get("/recordings", requireAuth, async (req, res) => {
   try {
     const recordings = await Grabacion.findByUser(req.user.id);
     res.json({ success: true, recordings });
   } catch (err) {
-    console.error('[RECORDINGS GET]', err);
-    res.status(500).json({ success: false, message: 'Error al obtener grabaciones.' });
+    console.error("[RECORDINGS GET]", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Error al obtener grabaciones." });
   }
 });
 
 // PUT /recordings/:id — Editar título y/o materia
-router.put('/recordings/:id', requireAuth, async (req, res) => {
+router.put("/recordings/:id", requireAuth, async (req, res) => {
   try {
     const { title, subject } = req.body;
-    const updated = await Grabacion.update(req.params.id, req.user.id, { title, subject });
+    const updated = await Grabacion.update(req.params.id, req.user.id, {
+      title,
+      subject,
+    });
     res.json({ success: true, recording: updated });
   } catch (err) {
-    console.error('[RECORDINGS PUT]', err);
-    res.status(500).json({ success: false, message: 'Error al actualizar grabación.' });
+    console.error("[RECORDINGS PUT]", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Error al actualizar grabación." });
   }
 });
 
 // DELETE /recordings/:id — Eliminar grabación y archivo
-router.delete('/recordings/:id', requireAuth, async (req, res) => {
+router.delete("/recordings/:id", requireAuth, async (req, res) => {
   try {
     const { filePath } = req.body;
     await Grabacion.delete(req.params.id, req.user.id, filePath);
-    res.json({ success: true, message: 'Grabación eliminada.' });
+    res.json({ success: true, message: "Grabación eliminada." });
   } catch (err) {
-    console.error('[RECORDINGS DELETE]', err);
-    res.status(500).json({ success: false, message: 'Error al eliminar grabación.' });
+    console.error("[RECORDINGS DELETE]", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Error al eliminar grabación." });
   }
 });
 
 // GET /recordings/:id/download — URL de descarga firmada
-router.get('/recordings/:id/download', requireAuth, async (req, res) => {
+router.get("/recordings/:id/download", requireAuth, async (req, res) => {
   try {
-    const recording = await Grabacion.findByIdAndUser(req.params.id, req.user.id);
-    if (!recording) return res.status(404).json({ success: false, message: 'No encontrada.' });
+    const recording = await Grabacion.findByIdAndUser(
+      req.params.id,
+      req.user.id,
+    );
+    if (!recording)
+      return res
+        .status(404)
+        .json({ success: false, message: "No encontrada." });
 
     const url = await Grabacion.getDownloadUrl(recording.file_path);
     res.json({ success: true, url });
   } catch (err) {
-    console.error('[RECORDINGS DOWNLOAD]', err);
-    res.status(500).json({ success: false, message: 'Error al generar URL.' });
+    console.error("[RECORDINGS DOWNLOAD]", err);
+    res.status(500).json({ success: false, message: "Error al generar URL." });
   }
 });
 
