@@ -1,3 +1,9 @@
+// ============================================================
+// screens/Subjects.tsx
+// Lista de materias desde API + crear nueva con modal (ícono + nombre)
+// ============================================================
+
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -5,44 +11,210 @@ import {
   Text,
   TouchableOpacity,
   SafeAreaView,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
-import { Card } from "../../components/Card";
-import type { ComponentProps } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import subjectService, { type Subject } from "../../services/subjectService";
 
 type SubjectsProps = {
   onNavigateToRecording?: () => void;
   onNavigateToConfiguracion?: () => void;
   onNavigateToRecientes: () => void;
+  onNavigateToSubjectDetail?: (subject: Subject, index: number) => void;
 };
 
-export const Subject = ({
+// ── Tarjeta de materia ───────────────────────────────────────
+function SubjectCard({
+  subject,
+  index,
+  onPress,
+  onOptionsPress,
+}: {
+  subject: Subject;
+  index: number;
+  onPress: () => void;
+  onOptionsPress: () => void;
+}) {
+  const { bg, accent } = subjectService.getCardColor(index);
+  return (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
+      <TouchableOpacity style={styles.cardMenu} onPress={onOptionsPress}>
+        <Ionicons name="ellipsis-horizontal" size={18} color="#C0C0C0" />
+      </TouchableOpacity>
+      <View style={[styles.cardIcon, { backgroundColor: bg }]}>
+        <Ionicons
+          name={(subject.icon as any) || "book-outline"}
+          size={26}
+          color={accent}
+        />
+      </View>
+      <Text style={styles.cardTitle} numberOfLines={1}>
+        {subject.name}
+      </Text>
+      <Text style={styles.cardNotes}>
+        {subject.recording_count ?? 0} grabación
+        {subject.recording_count !== 1 ? "es" : ""}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// ── Selector de íconos ───────────────────────────────────────
+function IconSelector({
+  selected,
+  onSelect,
+}: {
+  selected: string;
+  onSelect: (icon: string) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.iconScroll}
+      contentContainerStyle={styles.iconScrollContent}
+    >
+      {subjectService.availableIcons.map((ic) => {
+        const isSelected = selected === ic.name;
+        return (
+          <TouchableOpacity
+            key={ic.name}
+            style={[styles.iconOption, isSelected && styles.iconOptionActive]}
+            onPress={() => onSelect(ic.name)}
+          >
+            <Ionicons
+              name={ic.name as any}
+              size={22}
+              color={isSelected ? "#007AFF" : "#8E8E93"}
+            />
+            <Text
+              style={[
+                styles.iconLabel,
+                isSelected && { color: "#007AFF", fontWeight: "600" },
+              ]}
+            >
+              {ic.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+// ── Pantalla principal ───────────────────────────────────────
+export const Subjects = ({
   onNavigateToRecording,
   onNavigateToConfiguracion,
   onNavigateToRecientes,
+  onNavigateToSubjectDetail,
 }: SubjectsProps) => {
-  interface Subject {
-    title: string;
-    icon: ComponentProps<typeof Ionicons>["name"];
-    notes: string;
-    color: "blue" | "red" | "green" | "yellow" | "purple";
-  }
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const subjects: Subject[] = [
-    {
-      title: "Matemáticas",
-      icon: "calculator",
-      notes: "12 notas",
-      color: "blue",
-    },
-    { title: "Historia", icon: "book", notes: "8 notas", color: "yellow" },
-    { title: "Biología", icon: "leaf", notes: "24 notas", color: "green" },
-    { title: "Literatura", icon: "library", notes: "5 notas", color: "purple" },
-    { title: "Física", icon: "flask", notes: "15 notas", color: "blue" },
-    { title: "Química", icon: "beaker", notes: "9 notas", color: "green" },
-  ];
+  // Modal crear
+  const [createModal, setCreateModal] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState("book-outline");
+  const [creating, setCreating] = useState(false);
 
-  //  El componente del título y la lupa
+  // Modal opciones/editar
+  const [optionsModal, setOptionsModal] = useState(false);
+  const [optionsTarget, setOptionsTarget] = useState<Subject | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editIcon, setEditIcon] = useState("book-outline");
+  const [editSaving, setEditSaving] = useState(false);
+
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    const data = await subjectService.getAll();
+    setSubjects(data);
+    setLoading(false);
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // ── Crear materia ──────────────────────────────────────────
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setCreating(true);
+    const res = await subjectService.create(newName.trim(), newIcon);
+    setCreating(false);
+    if (res.success) {
+      setCreateModal(false);
+      setNewName("");
+      setNewIcon("book-outline");
+      load(true);
+    } else {
+      Alert.alert("Error", res.message || "No se pudo crear la materia.");
+    }
+  };
+
+  // ── Abrir opciones ─────────────────────────────────────────
+  const openOptions = (subject: Subject) => {
+    setOptionsTarget(subject);
+    setEditMode(false);
+    setEditName(subject.name);
+    setEditIcon(subject.icon || "book-outline");
+    setOptionsModal(true);
+  };
+
+  // ── Guardar edición ────────────────────────────────────────
+  const handleEdit = async () => {
+    if (!optionsTarget || !editName.trim()) return;
+    setEditSaving(true);
+    const res = await subjectService.update(optionsTarget.id, {
+      name: editName.trim(),
+      icon: editIcon,
+    });
+    setEditSaving(false);
+    if (res.success) {
+      setOptionsModal(false);
+      load(true);
+    } else {
+      Alert.alert("Error", res.message || "No se pudo actualizar.");
+    }
+  };
+
+  // ── Eliminar materia ───────────────────────────────────────
+  const handleDelete = () => {
+    if (!optionsTarget) return;
+    Alert.alert(
+      "Eliminar materia",
+      `¿Eliminar "${optionsTarget.name}"? Las grabaciones no serán eliminadas, solo quedarán sin materia asignada.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            setOptionsModal(false);
+            const res = await subjectService.delete(optionsTarget.id);
+            if (res.success) {
+              load(true);
+            } else {
+              Alert.alert("Error", res.message || "No se pudo eliminar.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const Header = () => (
     <View style={styles.headerContainer}>
       <View>
@@ -57,32 +229,65 @@ export const Subject = ({
 
   return (
     <SafeAreaView style={styles.mainContainer}>
-      <FlatList
-        data={subjects}
-        numColumns={2}
-        keyExtractor={(item) => item.title}
-        ListHeaderComponent={Header}
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.row}
-        renderItem={({ item }) => (
-          <View style={styles.cardWrapper}>
-            <Card
-              title={item.title}
-              icon={item.icon}
-              notes={item.notes}
-              color={item.color}
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : (
+        <FlatList
+          data={subjects}
+          numColumns={2}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={Header}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          columnWrapperStyle={subjects.length > 0 ? styles.row : undefined}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load(true);
+              }}
+              tintColor="#007AFF"
             />
-          </View>
-        )}
-      />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Ionicons name="folder-open-outline" size={52} color="#D0D0D0" />
+              <Text style={styles.emptyTitle}>Sin materias</Text>
+              <Text style={styles.emptyText}>
+                Toca el botón + para crear tu primera materia.
+              </Text>
+            </View>
+          }
+          renderItem={({ item, index }) => (
+            <View style={styles.cardWrapper}>
+              <SubjectCard
+                subject={item}
+                index={index}
+                onPress={() => onNavigateToSubjectDetail?.(item, index)}
+                onOptionsPress={() => openOptions(item)}
+              />
+            </View>
+          )}
+        />
+      )}
 
-      {}
-      <TouchableOpacity style={styles.fab} activeOpacity={0.7}>
+      {/* FAB crear materia */}
+      <TouchableOpacity
+        style={styles.fab}
+        activeOpacity={0.7}
+        onPress={() => {
+          setNewName("");
+          setNewIcon("book-outline");
+          setCreateModal(true);
+        }}
+      >
         <Ionicons name="add" size={30} color="white" />
       </TouchableOpacity>
 
-      {/* Navigation Tab Bar */}
+      {/* Tab Bar */}
       <View style={styles.tabBar}>
         <TouchableOpacity
           style={styles.tabItem}
@@ -91,12 +296,10 @@ export const Subject = ({
           <Ionicons name="home" size={24} color="#8E8E93" />
           <Text style={styles.tabLabel}>Inicio</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={[styles.tabItem, styles.activeTab]}>
           <Ionicons name="folder" size={24} color="#007AFF" />
           <Text style={[styles.tabLabel, styles.activeTabLabel]}>Materias</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.tabItem}
           onPress={onNavigateToRecientes}
@@ -104,7 +307,6 @@ export const Subject = ({
           <Ionicons name="time" size={24} color="#8E8E93" />
           <Text style={styles.tabLabel}>Recientes</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.tabItem}
           onPress={onNavigateToConfiguracion}
@@ -113,65 +315,201 @@ export const Subject = ({
           <Text style={styles.tabLabel}>Ajustes</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── Modal: Crear materia ─────────────────────────────── */}
+      <Modal visible={createModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Nueva materia</Text>
+
+            <Text style={styles.fieldLabel}>Nombre</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="Ej. Matemáticas, Historia..."
+              placeholderTextColor="#bbb"
+              autoFocus
+            />
+
+            <Text style={styles.fieldLabel}>Ícono</Text>
+            <IconSelector selected={newIcon} onSelect={setNewIcon} />
+
+            <View style={styles.modalBtns}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setCreateModal(false)}
+              >
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.saveBtn,
+                  (!newName.trim() || creating) && { opacity: 0.5 },
+                ]}
+                onPress={handleCreate}
+                disabled={!newName.trim() || creating}
+              >
+                {creating ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <Text style={styles.saveText}>Crear</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal: Opciones / Editar materia ────────────────── */}
+      <Modal visible={optionsModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHandle} />
+
+            {!editMode ? (
+              <>
+                <Text style={styles.modalTitle}>{optionsTarget?.name}</Text>
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={() => setEditMode(true)}
+                >
+                  <Ionicons name="pencil-outline" size={20} color="#007AFF" />
+                  <Text style={styles.optionText}>Editar materia</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.optionRow}
+                  onPress={handleDelete}
+                >
+                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                  <Text style={[styles.optionText, { color: "#FF3B30" }]}>
+                    Eliminar materia
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { marginTop: 12 }]}
+                  onPress={() => setOptionsModal(false)}
+                >
+                  <Text style={styles.cancelText}>Cancelar</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>Editar materia</Text>
+                <Text style={styles.fieldLabel}>Nombre</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Nombre de la materia"
+                  placeholderTextColor="#bbb"
+                  autoFocus
+                />
+                <Text style={styles.fieldLabel}>Ícono</Text>
+                <IconSelector selected={editIcon} onSelect={setEditIcon} />
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity
+                    style={styles.cancelBtn}
+                    onPress={() => setEditMode(false)}
+                  >
+                    <Text style={styles.cancelText}>Volver</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveBtn, editSaving && { opacity: 0.7 }]}
+                    onPress={handleEdit}
+                    disabled={editSaving}
+                  >
+                    {editSaving ? (
+                      <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                      <Text style={styles.saveText}>Guardar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: "#F8F9FB",
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
-  },
+  mainContainer: { flex: 1, backgroundColor: "#F8F9FB" },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 110 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+
   headerContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginTop: 40,
     marginBottom: 25,
+    paddingHorizontal: 4,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#1A2130",
+  title: { fontSize: 32, fontWeight: "bold", color: "#1A2130" },
+  subtitle: { fontSize: 16, color: "#8E8E93" },
+  searchButton: { padding: 8 },
+
+  row: { justifyContent: "space-between" },
+  cardWrapper: { width: "48%", marginBottom: 14 },
+
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  subtitle: {
-    fontSize: 16,
-    color: "#8E8E93",
-  },
-  searchButton: {
-    padding: 8,
-  },
-  row: {
-    justifyContent: "space-between",
-  },
-  cardWrapper: {
-    width: "48%",
-    marginBottom: 15,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 30,
-    right: 25,
-    backgroundColor: "#4285F4",
-    width: 65,
-    height: 65,
-    borderRadius: 22,
+  cardMenu: { position: "absolute", top: 10, right: 10, padding: 6 },
+  cardIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    // Sombras
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    marginBottom: 10,
   },
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1A2130",
+    marginBottom: 4,
+  },
+  cardNotes: { fontSize: 12, color: "#999" },
+
+  emptyWrap: { alignItems: "center", paddingTop: 60, gap: 10 },
+  emptyTitle: { fontSize: 18, fontWeight: "600", color: "#333" },
+  emptyText: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+    maxWidth: 220,
+  },
+
+  fab: {
+    position: "absolute",
+    bottom: 84,
+    right: 20,
+    backgroundColor: "#007AFF",
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 6,
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+  },
+
   tabBar: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -181,22 +519,103 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     paddingTop: 8,
     justifyContent: "space-around",
-    paddingBottom: 8,
   },
-  tabItem: {
-    alignItems: "center",
-    justifyContent: "flex-start",
+  tabItem: { alignItems: "center", justifyContent: "flex-start", flex: 1 },
+  activeTab: { opacity: 1 },
+  tabLabel: { fontSize: 11, color: "#8E8E93", marginTop: 4 },
+  activeTabLabel: { color: "#007AFF" },
+
+  modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
   },
-  activeTab: {
-    opacity: 1,
+  modalCard: {
+    backgroundColor: "#FFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 44,
   },
-  tabLabel: {
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E0E0E0",
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 16,
+  },
+  fieldLabel: {
     fontSize: 11,
-    color: "#8E8E93",
-    marginTop: 4,
+    fontWeight: "600",
+    color: "#999",
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-  activeTabLabel: {
-    color: "#007AFF",
+  fieldInput: {
+    borderWidth: 1,
+    borderColor: "#E8E8E8",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 15,
+    color: "#1a1a1a",
+    backgroundColor: "#FAFAFA",
+    marginBottom: 14,
   },
+  modalBtns: { flexDirection: "row", gap: 10, marginTop: 8 },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+    alignItems: "center",
+  },
+  cancelText: { color: "#666", fontWeight: "600" },
+  saveBtn: {
+    flex: 2,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: "#007AFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveText: { color: "#FFF", fontWeight: "600", fontSize: 15 },
+
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  optionText: { fontSize: 16, color: "#1a1a1a", fontWeight: "500" },
+
+  iconScroll: { marginBottom: 14 },
+  iconScrollContent: { gap: 8, paddingVertical: 4 },
+  iconOption: {
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#E8E8E8",
+    backgroundColor: "#FAFAFA",
+    gap: 4,
+    minWidth: 70,
+  },
+  iconOptionActive: {
+    borderColor: "#007AFF",
+    backgroundColor: "#EBF4FF",
+  },
+  iconLabel: { fontSize: 10, color: "#8E8E93", textAlign: "center" },
 });

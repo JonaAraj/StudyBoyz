@@ -1,18 +1,6 @@
-// ============================================================
-// AGREGAR ESTOS ENDPOINTS AL ARCHIVO endpoint.js EXISTENTE
-// Pega este contenido antes del module.exports = router
-// ============================================================
-
-// Asegúrate de tener estos requires al inicio de endpoint.js:
-// const Grabacion = require('./models/Grabacion');
-// const Transcription = require('./models/Transcription');
-// const deepgramService = require('./services/deepgramService');
-// const multer = require('multer');
-// const { supabaseAdmin } = require('./config/supabase');
-
 const multer = require("multer");
 const Transcription = require("./models/Transcription");
-const deepgramService = require("./services/deepGramService");
+const deepgramService = require("./services/deepgramService");
 const { supabaseAdmin } = require("./config/supabase");
 
 const upload = multer({

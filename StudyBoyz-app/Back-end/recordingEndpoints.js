@@ -79,7 +79,7 @@ router.post(
       if (dbError) throw dbError;
 
       // 3. Transcribir en background (no bloquea la respuesta)
-      const { transcribeInBackground } = require("./transcriptionEndpoints");
+      const { transcribeInBackground } = require("./transcriptionEndPoints");
       transcribeInBackground(
         recording.id,
         userId,

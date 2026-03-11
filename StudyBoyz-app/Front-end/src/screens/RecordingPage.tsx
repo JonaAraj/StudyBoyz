@@ -1,6 +1,7 @@
 // ============================================================
-// RecordingPage.tsx v2
+// RecordingPage.tsx v3
 // Flujo: idle → [Iniciar] → recording → [Pausar/Reanudar] → [Detener] → modal guardar
+// Modal guardar: selecciona materia por UUID (subject_id) o crea una nueva
 // Compatible web (MediaRecorder) y móvil (expo-av)
 // ============================================================
 
@@ -23,6 +24,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { useRecorder } from "../../hooks/useRecorder";
 import recordingApiService from "../../services/recordingApiService";
+import subjectService, { type Subject } from "../../services/subjectService";
 
 type RecordingPageProps = {
   onNavigateToSubjects?: () => void;
@@ -53,16 +55,18 @@ export default function RecordingPage({
     cancelRecording,
   } = useRecorder();
 
-  const [materias, setMaterias] = useState<string[]>([]);
-  const [loadingMaterias, setLoadingMaterias] = useState(false);
+  // Lista de materias como objetos Subject (con id UUID)
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
 
   // Modal guardar
   const [saveModal, setSaveModal] = useState(false);
   const [pendingResult, setPendingResult] = useState<any>(null);
-  const [selectedSubject, setSelectedSubject] = useState("");
-  const [customSubject, setCustomSubject] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [customSubjectName, setCustomSubjectName] = useState("");
   const [recordingTitle, setRecordingTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  const [creatingSubject, setCreatingSubject] = useState(false);
 
   // Modal upload externo
   const [uploadModal, setUploadModal] = useState(false);
@@ -97,14 +101,14 @@ export default function RecordingPage({
   }, [state]);
 
   useEffect(() => {
-    fetchMaterias();
+    fetchSubjects();
   }, []);
 
-  const fetchMaterias = async () => {
-    setLoadingMaterias(true);
-    const data = await recordingApiService.getMaterias();
-    setMaterias(data);
-    setLoadingMaterias(false);
+  const fetchSubjects = async () => {
+    setLoadingSubjects(true);
+    const data = await recordingApiService.getSubjects();
+    setSubjects(data);
+    setLoadingSubjects(false);
   };
 
   // ── Iniciar ──────────────────────────────────────────────────
@@ -126,28 +130,85 @@ export default function RecordingPage({
     );
   };
 
-  // ── Detener → modal ──────────────────────────────────────────
+  // ── Detener → abrir modal ────────────────────────────────────
   const handleStop = async () => {
     const result = await stopRecording();
     if (!result) return;
     setPendingResult(result);
     setRecordingTitle(`Grabación ${new Date().toLocaleDateString("es-MX")}`);
-    setSelectedSubject("");
-    setCustomSubject("");
+    setSelectedSubject(null);
+    setCustomSubjectName("");
     setSaveModal(true);
+    // Refrescar materias al abrir modal
+    fetchSubjects();
   };
 
-  // ── Guardar con materia ──────────────────────────────────────
+  // ── Crear materia nueva desde el modal de guardar ────────────
+  const handleCreateAndSelectSubject = async () => {
+    const name = customSubjectName.trim();
+    if (!name) return;
+    setCreatingSubject(true);
+    const res = await subjectService.create(name, "book-outline");
+    setCreatingSubject(false);
+    if (res.success && res.subject) {
+      // Agregar a la lista local y seleccionarla
+      const newSubject: Subject = res.subject;
+      setSubjects((prev) => [...prev, newSubject]);
+      setSelectedSubject(newSubject);
+      setCustomSubjectName("");
+    } else {
+      Alert.alert("Error", res.message || "No se pudo crear la materia.");
+    }
+  };
+
+  // ── Guardar grabación ────────────────────────────────────────
   const handleSave = async () => {
     if (!pendingResult) return;
-    const subject = customSubject.trim() || selectedSubject;
-    if (!subject) {
+
+    // Si hay texto en customSubjectName sin haber creado → crear primero
+    if (customSubjectName.trim() && !selectedSubject) {
       Alert.alert(
-        "Materia requerida",
-        "Selecciona o escribe una materia antes de guardar.",
+        "Materia sin crear",
+        `¿Deseas crear la materia "${customSubjectName.trim()}" y guardar?`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Crear y guardar",
+            onPress: async () => {
+              setCreatingSubject(true);
+              const res = await subjectService.create(
+                customSubjectName.trim(),
+                "book-outline",
+              );
+              setCreatingSubject(false);
+              if (res.success && res.subject) {
+                await doSave(res.subject.id);
+              } else {
+                Alert.alert(
+                  "Error",
+                  res.message || "No se pudo crear la materia.",
+                );
+              }
+            },
+          },
+        ],
       );
       return;
     }
+
+    if (!selectedSubject) {
+      Alert.alert(
+        "Materia requerida",
+        "Selecciona una materia antes de guardar.",
+      );
+      return;
+    }
+
+    await doSave(selectedSubject.id);
+  };
+
+  const doSave = async (subjectId: string) => {
+    if (!pendingResult) return;
     setSaving(true);
     const res = await recordingApiService.saveRecording({
       uri: pendingResult.uri,
@@ -157,9 +218,10 @@ export default function RecordingPage({
       title:
         recordingTitle.trim() ||
         `Grabación ${new Date().toLocaleDateString("es-MX")}`,
-      subject,
+      subjectId,
     });
     setSaving(false);
+
     if (res.success) {
       setSaveModal(false);
       setPendingResult(null);
@@ -248,8 +310,6 @@ export default function RecordingPage({
   const isRecording = state === "recording";
   const isPaused = state === "paused";
   const isActive = isRecording || isPaused;
-
-  // ── Color de la onda según estado ────────────────────────────
   const waveColor = isRecording ? "#007AFF" : isPaused ? "#FFB300" : "#D0D0D0";
 
   return (
@@ -283,7 +343,7 @@ export default function RecordingPage({
           </TouchableOpacity>
         </View>
 
-        {/* Materia */}
+        {/* Materia actual (indicador visual) */}
         <View style={styles.subjectSection}>
           <Text style={styles.subjectLabel}>Materia Actual</Text>
           <View style={styles.subjectSelector}>
@@ -310,7 +370,6 @@ export default function RecordingPage({
 
         {/* Visualización */}
         <View style={styles.vizCard}>
-          {/* Tiempo */}
           <Text
             style={[
               styles.timeDisplay,
@@ -321,7 +380,6 @@ export default function RecordingPage({
           </Text>
           <Text style={styles.timeLabel}>Tiempo transcurrido</Text>
 
-          {/* Waveform */}
           <View style={styles.waveform}>
             {metering.map((h, i) => (
               <View
@@ -334,7 +392,6 @@ export default function RecordingPage({
             ))}
           </View>
 
-          {/* Estado */}
           <View style={styles.statusRow}>
             <Animated.View
               style={[
@@ -372,9 +429,8 @@ export default function RecordingPage({
           </View>
         </View>
 
-        {/* ── CONTROLES ── */}
+        {/* Controles */}
         <View style={styles.controls}>
-          {/* Botón INICIAR — solo visible en idle */}
           {isIdle && (
             <TouchableOpacity style={styles.startButton} onPress={handleStart}>
               <Ionicons name="mic" size={28} color="#FFF" />
@@ -382,10 +438,8 @@ export default function RecordingPage({
             </TouchableOpacity>
           )}
 
-          {/* Controles activos — visibles cuando está grabando o pausado */}
           {isActive && (
             <>
-              {/* Marcar punto */}
               <TouchableOpacity
                 style={styles.flagButton}
                 onPress={handleMarkPoint}
@@ -396,9 +450,7 @@ export default function RecordingPage({
                 </Text>
               </TouchableOpacity>
 
-              {/* Fila de botones */}
               <View style={styles.actionRow}>
-                {/* Pausar / Reanudar */}
                 <TouchableOpacity
                   style={styles.actionBtn}
                   onPress={handlePauseResume}
@@ -415,7 +467,6 @@ export default function RecordingPage({
                   </Text>
                 </TouchableOpacity>
 
-                {/* Detener */}
                 <TouchableOpacity style={styles.stopBtn} onPress={handleStop}>
                   <View style={styles.actionIconWrap}>
                     <View style={styles.stopSquare} />
@@ -423,7 +474,6 @@ export default function RecordingPage({
                   <Text style={styles.stopLabel}>Detener</Text>
                 </TouchableOpacity>
 
-                {/* Cancelar */}
                 <TouchableOpacity
                   style={styles.actionBtn}
                   onPress={handleCancel}
@@ -452,7 +502,7 @@ export default function RecordingPage({
         </View>
       </ScrollView>
 
-      {/* ── Modal: Guardar grabación ────────────────────────── */}
+      {/* ── Modal: Guardar grabación ─────────────────────────── */}
       <Modal visible={saveModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -463,6 +513,7 @@ export default function RecordingPage({
               {formatDuration(pendingResult?.durationMillis || 0)}
             </Text>
 
+            {/* Título */}
             <Text style={styles.fieldLabel}>Título</Text>
             <TextInput
               style={styles.fieldInput}
@@ -472,65 +523,102 @@ export default function RecordingPage({
               placeholderTextColor="#bbb"
             />
 
+            {/* Selector de materia */}
             <Text style={styles.fieldLabel}>
               Materia{" "}
-              {loadingMaterias && (
+              {loadingSubjects && (
                 <ActivityIndicator size="small" color="#999" />
               )}
             </Text>
 
-            {materias.length > 0 && (
+            {/* Chips de materias existentes */}
+            {subjects.length > 0 && (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.chips}
               >
-                {materias.map((m) => (
-                  <TouchableOpacity
-                    key={m}
-                    style={[
-                      styles.chip,
-                      selectedSubject === m &&
-                        !customSubject &&
-                        styles.chipActive,
-                    ]}
-                    onPress={() => {
-                      setSelectedSubject(m);
-                      setCustomSubject("");
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        selectedSubject === m &&
-                          !customSubject &&
-                          styles.chipTextActive,
-                      ]}
+                {subjects.map((s) => {
+                  const isSelected =
+                    selectedSubject?.id === s.id && !customSubjectName;
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.chip, isSelected && styles.chipActive]}
+                      onPress={() => {
+                        setSelectedSubject(s);
+                        setCustomSubjectName("");
+                      }}
                     >
-                      {m}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Ionicons
+                        name={(s.icon as any) || "book-outline"}
+                        size={13}
+                        color={isSelected ? "#FFF" : "#666"}
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text
+                        style={[
+                          styles.chipText,
+                          isSelected && styles.chipTextActive,
+                        ]}
+                      >
+                        {s.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             )}
 
-            {materias.length === 0 && !loadingMaterias && (
+            {subjects.length === 0 && !loadingSubjects && (
               <Text style={styles.noMateriaHint}>
                 Aún no tienes materias. Escribe una nueva abajo.
               </Text>
             )}
 
-            <TextInput
-              style={[styles.fieldInput, { marginTop: 10 }]}
-              value={customSubject}
-              onChangeText={(t) => {
-                setCustomSubject(t);
-                if (t) setSelectedSubject("");
-              }}
-              placeholder="O escribe una materia nueva..."
-              placeholderTextColor="#bbb"
-            />
+            {/* Crear materia nueva */}
+            <View style={styles.newSubjectRow}>
+              <TextInput
+                style={[styles.fieldInput, styles.newSubjectInput]}
+                value={customSubjectName}
+                onChangeText={(t) => {
+                  setCustomSubjectName(t);
+                  if (t) setSelectedSubject(null);
+                }}
+                placeholder="O escribe una materia nueva..."
+                placeholderTextColor="#bbb"
+                returnKeyType="done"
+                onSubmitEditing={handleCreateAndSelectSubject}
+              />
+              {customSubjectName.trim().length > 0 && (
+                <TouchableOpacity
+                  style={[
+                    styles.createSubjectBtn,
+                    creatingSubject && { opacity: 0.6 },
+                  ]}
+                  onPress={handleCreateAndSelectSubject}
+                  disabled={creatingSubject}
+                >
+                  {creatingSubject ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Ionicons name="add" size={20} color="#FFF" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
 
+            {/* Materia seleccionada (confirmación visual) */}
+            {selectedSubject && (
+              <View style={styles.selectedBadge}>
+                <Ionicons name="checkmark-circle" size={15} color="#34C759" />
+                <Text style={styles.selectedBadgeText}>
+                  {selectedSubject.name}
+                </Text>
+              </View>
+            )}
+
+            {/* Botones */}
             <View style={styles.modalBtns}>
               <TouchableOpacity
                 style={styles.discardBtn}
@@ -558,7 +646,7 @@ export default function RecordingPage({
         </View>
       </Modal>
 
-      {/* ── Modal: Upload externo ───────────────────────────── */}
+      {/* ── Modal: Upload externo ────────────────────────────── */}
       <Modal visible={uploadModal} transparent animationType="fade">
         <View style={styles.uploadOverlay}>
           <View style={styles.uploadCard}>
@@ -657,8 +745,6 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 13, fontWeight: "600" },
 
   controls: { marginBottom: 16 },
-
-  // Botón de inicio
   startButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -675,7 +761,6 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   startButtonText: { color: "#FFF", fontSize: 18, fontWeight: "700" },
-
   flagButton: {
     backgroundColor: "#007AFF",
     flexDirection: "row",
@@ -687,7 +772,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   flagButtonText: { color: "#FFF", fontSize: 14, fontWeight: "600" },
-
   actionRow: { flexDirection: "row", gap: 8 },
   actionBtn: {
     flex: 1,
@@ -775,8 +859,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     marginBottom: 12,
   },
-  chips: { marginBottom: 4 },
+  chips: { marginBottom: 10 },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
@@ -791,10 +877,45 @@ const styles = StyleSheet.create({
   noMateriaHint: {
     fontSize: 13,
     color: "#bbb",
-    marginBottom: 4,
+    marginBottom: 10,
     fontStyle: "italic",
   },
-  modalBtns: { flexDirection: "row", gap: 10, marginTop: 8 },
+
+  newSubjectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  newSubjectInput: { flex: 1, marginBottom: 0 },
+  createSubjectBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#34C759",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  selectedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E8FAF0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  selectedBadgeText: {
+    fontSize: 13,
+    color: "#34C759",
+    fontWeight: "600",
+  },
+
+  modalBtns: { flexDirection: "row", gap: 10, marginTop: 12 },
   discardBtn: {
     flex: 1,
     flexDirection: "row",

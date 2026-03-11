@@ -1,6 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// ============================================================
+// services/recordingsService.ts
+// ============================================================
 
-const API_BASE_URL = 'http://localhost:3000/api';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const API_BASE_URL = "http://192.168.1.7:3000/api";
 
 export interface Recording {
   id: string;
@@ -8,19 +12,21 @@ export interface Recording {
   file_path: string;
   duration: number | null;
   size_bytes: number | null;
-  subject: string | null;
+  subject: string | null;       // nombre de la materia (para mostrar)
+  subject_id: string | null;    // UUID de la materia (para filtrar / relacionar)
   created_at: string;
   user_id: number;
+  transcript_status: "pending" | "processing" | "done" | "error";
 }
 
-const getToken = async () => AsyncStorage.getItem('@studyboyz_token');
+const getToken = async () => AsyncStorage.getItem("@studyboyz_token");
 
 const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const token = await getToken();
   return fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...((options.headers as Record<string, string>) || {}),
     },
@@ -30,7 +36,7 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 const recordingsService = {
   async getAll(): Promise<Recording[]> {
     try {
-      const res = await apiFetch('/recordings');
+      const res = await apiFetch("/recordings");
       const data = await res.json();
       return data.success ? data.recordings : [];
     } catch {
@@ -38,27 +44,27 @@ const recordingsService = {
     }
   },
 
-  async update(id: string, fields: { title?: string; subject?: string }) {
+  async update(id: string, fields: { title?: string; subject_id?: string | null }) {
     try {
       const res = await apiFetch(`/recordings/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(fields),
       });
       return await res.json();
     } catch {
-      return { success: false, message: 'Error de conexión.' };
+      return { success: false, message: "Error de conexión." };
     }
   },
 
   async delete(id: string, filePath: string) {
     try {
       const res = await apiFetch(`/recordings/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         body: JSON.stringify({ filePath }),
       });
       return await res.json();
     } catch {
-      return { success: false, message: 'Error de conexión.' };
+      return { success: false, message: "Error de conexión." };
     }
   },
 
@@ -73,21 +79,24 @@ const recordingsService = {
   },
 
   formatDuration(seconds: number | null): string {
-    if (!seconds) return '—';
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
+    if (!seconds) return "—";
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
     return `${m}:${s}`;
   },
 
   formatSize(bytes: number | null): string {
-    if (!bytes) return '—';
+    if (!bytes) return "—";
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   },
 
   formatDate(iso: string): string {
-    const d = new Date(iso);
-    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(iso).toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   },
 };
 

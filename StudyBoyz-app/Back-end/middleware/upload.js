@@ -9,7 +9,7 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Configurar almacenamiento
-const storage = multer.diskStorage({
+const storage = multer.memoryStorage();({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },

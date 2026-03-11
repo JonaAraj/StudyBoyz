@@ -1,12 +1,13 @@
 // ============================================================
 // recordingApiService.ts — Servicio para grabaciones (Front-end)
-// Guardar audio grabado, subir externo, obtener materias
+// Guardar audio grabado, subir externo, obtener materias (como Subject[])
 // ============================================================
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
+import subjectService, { type Subject } from "./subjectService";
 
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = "http://192.168.1.7:3000/api";
 
 const getToken = async () => AsyncStorage.getItem("@studyboyz_token");
 
@@ -16,7 +17,7 @@ interface SaveRecordingParams {
   mimeType: string;
   durationMillis: number;
   title: string;
-  subject: string;
+  subjectId: string; // UUID de la materia (antes era subject: string)
 }
 
 interface UploadExternalParams {
@@ -24,29 +25,21 @@ interface UploadExternalParams {
   name: string;
   mimeType: string;
   title?: string;
-  subject?: string;
+  subjectId?: string; // UUID opcional
 }
 
 const recordingApiService = {
   /**
-   * Obtiene la lista de materias únicas del usuario
+   * Obtiene la lista de materias del usuario como objetos Subject completos,
+   * con id (UUID) y nombre — para poder mostrar chips y enviar subject_id al guardar.
    */
-  async getMaterias(): Promise<string[]> {
-    try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE_URL}/materias`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      return data.success ? data.materias : [];
-    } catch {
-      return [];
-    }
+  async getSubjects(): Promise<Subject[]> {
+    return subjectService.getAll();
   },
 
   /**
-   * Guarda una grabación en el back-end
-   * Funciona tanto en móvil (uri local) como en web (Blob)
+   * Guarda una grabación en el back-end enviando subject_id (UUID).
+   * Funciona tanto en móvil (uri local) como en web (Blob).
    */
   async saveRecording(params: SaveRecordingParams) {
     try {
@@ -54,11 +47,9 @@ const recordingApiService = {
       const formData = new FormData();
 
       if (Platform.OS === "web" && params.blob) {
-        // Web: usar Blob directamente
         const ext = params.mimeType.includes("webm") ? "webm" : "ogg";
         formData.append("audio", params.blob, `recording.${ext}`);
       } else {
-        // Móvil: usar URI del sistema de archivos
         formData.append("audio", {
           uri: params.uri,
           name: "recording.m4a",
@@ -67,17 +58,16 @@ const recordingApiService = {
       }
 
       formData.append("title", params.title);
-      formData.append("subject", params.subject);
+      formData.append("subject_id", params.subjectId);
       formData.append(
         "duration",
-        Math.floor(params.durationMillis / 1000).toString(),
+        Math.floor(params.durationMillis / 1000).toString()
       );
 
       const res = await fetch(`${API_BASE_URL}/recordings/save`, {
         method: "POST",
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          // NO agregar Content-Type — fetch lo pone automático con boundary
         },
         body: formData,
       });
@@ -92,7 +82,7 @@ const recordingApiService = {
   },
 
   /**
-   * Sube un audio externo desde el dispositivo
+   * Sube un audio externo desde el dispositivo.
    */
   async uploadExternal(params: UploadExternalParams) {
     try {
@@ -106,7 +96,7 @@ const recordingApiService = {
       } as any);
 
       if (params.title) formData.append("title", params.title);
-      if (params.subject) formData.append("subject", params.subject);
+      if (params.subjectId) formData.append("subject_id", params.subjectId);
 
       const res = await fetch(`${API_BASE_URL}/recordings/upload`, {
         method: "POST",
