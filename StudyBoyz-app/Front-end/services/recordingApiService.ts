@@ -7,7 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import subjectService, { type Subject } from "./subjectService";
 
-const API_BASE_URL = "http://192.168.1.7:3000/api";
+const API_BASE_URL = "http://172.27.224.1:3000/api";
 
 const getToken = async () => AsyncStorage.getItem("@studyboyz_token");
 

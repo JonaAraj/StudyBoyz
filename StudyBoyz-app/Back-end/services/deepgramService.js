@@ -6,7 +6,7 @@ const { createClient } = require("@deepgram/sdk");
 
 const deepgramService = {
   async transcribeFromUrl(audioUrl, language = "es") {
-    const deepgram = createClient(process.env.DEEPGRAM_API_KEY); // ← aquí adentro
+    const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 
     const { result, error } = await deepgram.listen.prerecorded.transcribeUrl(
       { url: audioUrl },

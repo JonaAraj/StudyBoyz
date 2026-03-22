@@ -1,8 +1,3 @@
-// ============================================================
-// supabase.js — Cliente Supabase centralizado (Back-end)
-// Reutilizable en cualquier proyecto Node.js
-// ============================================================
-
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config();
 

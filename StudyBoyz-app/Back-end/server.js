@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 // ── Middlewares globales ─────────────────────────────────────
 app.use(
   cors({
-    origin: "*", // En producción, reemplaza con tu dominio o IP de la app
+    origin: "*", 
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
@@ -60,7 +60,7 @@ app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo.`);
   console.log(`💻 Local:   http://localhost:${PORT}`);
   console.log(
-    `📱 Móvil:   http://${serverIP}:${PORT}  <-- USA ESTA IP EN EL FRONTEND`,
+    `📱 Móvil:   http://${serverIP}:${PORT}  `
   );
 });
 

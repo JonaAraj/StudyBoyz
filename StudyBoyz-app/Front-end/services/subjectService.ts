@@ -4,7 +4,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.1.7:3000/api'; // ← tu IP
+const API_BASE_URL = 'http://172.27.224.1:3000/api'; // ← tu IP
 
 export interface Subject {
   id: string;

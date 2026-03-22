@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ── Configuración base ───────────────────────────────────────
 // Reemplaza la IP abajo con la que te muestra la consola del servidor (ej. 192.168.1.X)
-const API_BASE_URL = 'http://192.168.1.7:3000/api';
+const API_BASE_URL = 'http://172.27.224.1:3000/api';
 
 const STORAGE_KEYS = {
   TOKEN: "@studyboyz_token",
