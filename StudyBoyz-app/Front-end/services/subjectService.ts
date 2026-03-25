@@ -4,7 +4,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://172.27.224.1:3000/api'; // ← tu IP
+const API_BASE_URL = 'http://localhost:3000/api';
 
 export interface Subject {
   id: string;
@@ -119,7 +119,7 @@ const subjectService = {
       { bg: '#FFFBE0', accent: '#FFCC00' },
       { bg: '#F0F0F5', accent: '#8E8E93' },
     ];
-    return palette[index % palette.length] || palette[0];
+    return palette[index % palette.length]!;
   },
 
   formatDuration(seconds: number | null): string {
