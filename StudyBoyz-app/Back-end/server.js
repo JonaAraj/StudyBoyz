@@ -3,6 +3,11 @@
 // ============================================================
 
 require("dotenv").config();
+
+// 🔧 SOLUCIÓN: Usar Google DNS si el DNS local no funciona
+const dns = require("dns");
+dns.setServers(["8.8.8.8", "8.8.4.4"]); // Google DNS
+
 const express = require("express");
 const cors = require("cors");
 const os = require("os");
@@ -57,11 +62,18 @@ app.listen(PORT, () => {
     });
   });
 
-  console.log(`✅ Servidor corriendo.`);
-  console.log(`💻 Local:   http://localhost:${PORT}`);
-  console.log(
-    `📱 Móvil:   http://${serverIP}:${PORT}  `
-  );
+  console.log(`
+╔═══════════════════════════════════════════════════════════════╗
+║                    🎓 StudyBoyz API v1.2.0                    ║
+║            ✅ Servidor ejecutado correctamente               ║
+╠═══════════════════════════════════════════════════════════════╣
+║  🔗 Local:       http://localhost:${PORT}                      ║
+║  🔗 Red:         http://${serverIP}:${PORT}                    ║
+║  🗄️  Base Datos:  Supabase                                    ║
+║  🔑 DNS:         Google (8.8.8.8, 8.8.4.4)                   ║
+╚═══════════════════════════════════════════════════════════════╝
+  `);
+  console.log("[SERVER] Escuchando en puerto", PORT);
 });
 
 module.exports = app;
