@@ -17,6 +17,7 @@ import {
   Modal,
   TextInput,
   RefreshControl,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import subjectService, {
@@ -104,6 +105,23 @@ export default function SubjectDetail({
     );
   };
 
+  // ── Descargar Grabación ──────────────────────────────────────
+  const handleDownload = async (rec: SubjectRecording) => {
+    try {
+      const url = await recordingsService.getDownloadUrl(rec.id);
+      if (url) {
+        Linking.openURL(url);
+      } else {
+        Alert.alert("Error", "No se pudo generar el enlace de descarga.");
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Ocurrió un problema al intentar descargar la grabación.",
+      );
+    }
+  };
+
   const openEdit = (rec: SubjectRecording) => {
     setEditTarget(rec);
     setEditTitle(rec.title);
@@ -189,6 +207,14 @@ export default function SubjectDetail({
                 </Text>
               </TouchableOpacity>
             )}
+
+            {/* Descargar */}
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={() => handleDownload(item)}
+            >
+              <Ionicons name="download-outline" size={18} color="#007AFF" />
+            </TouchableOpacity>
 
             {/* Editar */}
             <TouchableOpacity

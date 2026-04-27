@@ -240,32 +240,56 @@ export default function RecordingPage({
 
   // ── Descartar ────────────────────────────────────────────────
   const handleDiscard = () => {
-    Alert.alert("Descartar", "¿Seguro? No se puede recuperar.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Descartar",
-        style: "destructive",
-        onPress: () => {
-          setSaveModal(false);
-          setPendingResult(null);
+    Alert.alert(
+      "Descartar grabación",
+      "¿Estás seguro? Esta acción no se puede deshacer y el audio se perderá.",
+      [
+        { text: "No, mantener", style: "cancel" },
+        {
+          text: "Descartar",
+          style: "destructive",
+          onPress: () => {
+            setSaveModal(false);
+            setPendingResult(null);
+            setRecordingTitle("");
+            setSelectedSubject(null);
+            setCustomSubjectName("");
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   // ── Cancelar grabación activa ────────────────────────────────
   const handleCancel = () => {
-    Alert.alert("Cancelar", "¿Descartar la grabación actual?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Sí, descartar",
-        style: "destructive",
-        onPress: async () => {
-          await cancelRecording();
-          onNavigateToSubjects?.();
+    Alert.alert(
+      "Cancelar grabación",
+      "¿Estás seguro de que deseas interrumpir y descartar la grabación actual?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Sí, cancelar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              if (typeof cancelRecording === "function") {
+                await cancelRecording();
+              } else {
+                await stopRecording();
+              }
+            } catch (error) {
+              console.error("Error al cancelar la grabación:", error);
+            } finally {
+              setPendingResult(null);
+              setSaveModal(false);
+              setRecordingTitle("");
+              setSelectedSubject(null);
+              setCustomSubjectName("");
+            }
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   // ── Upload externo ───────────────────────────────────────────
