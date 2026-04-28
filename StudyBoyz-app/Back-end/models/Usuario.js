@@ -6,7 +6,7 @@
 const { supabaseAdmin } = require("../config/supabase");
 const bcrypt = require("bcryptjs");
 
-const TABLE = "Users";
+const TABLE = "users";
 
 const Usuario = {
   /**
@@ -17,7 +17,7 @@ const Usuario = {
     const { data, error } = await supabaseAdmin
       .from(TABLE)
       .select("*")
-      .eq("Email", email)
+      .eq("email", email)
       .single();
 
     if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows found
@@ -46,7 +46,7 @@ const Usuario = {
   async findById(id) {
     const { data, error } = await supabaseAdmin
       .from(TABLE)
-      .select("id, userName, Email, created_at")
+      .select("id, userName, email, created_at")
       .eq("id", id)
       .single();
 
@@ -66,11 +66,11 @@ const Usuario = {
       .insert([
         {
           userName,
-          Email: email,
+          email: email,
           password: hashedPassword,
         },
       ])
-      .select("id, userName, Email, created_at")
+      .select("id, userName, email, created_at")
       .single();
 
     if (error) throw error;

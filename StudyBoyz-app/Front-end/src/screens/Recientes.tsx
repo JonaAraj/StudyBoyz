@@ -7,11 +7,10 @@ import {
   SafeAreaView,
   ScrollView,
   RefreshControl,
-  Alert,
   Modal,
   TextInput,
   ActivityIndicator,
-  Linking,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import recordingsService from "../../services/recordingsService";
@@ -33,6 +32,12 @@ type RecientesProps = {
   onNavigateToRecording?: () => void;
 };
 
+interface AlertButton {
+  text: string;
+  style?: "default" | "cancel" | "destructive";
+  onPress?: () => void;
+}
+
 export default function Recientes({ onNavigateToRecording }: RecientesProps) {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +49,27 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
   const [editTitle, setEditTitle] = useState("");
   const [editSubject, setEditSubject] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Descarga
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Custom Alert Modal (Reemplaza a Alert nativo)
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons: AlertButton[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (title: string, message: string, buttons?: AlertButton[]) => {
+    setCustomAlert({
+      visible: true,
+      title,
+      message,
+      buttons: buttons || [{ text: "OK" }],
+    });
+  };
+  const closeAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const fetchRecordings = useCallback(async () => {
     const data = await recordingsService.getAll();
@@ -63,7 +89,7 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
 
   // ── Eliminar ────────────────────────────────────────────────
   const handleDelete = (rec: Recording) => {
-    Alert.alert(
+    showAlert(
       "Eliminar grabación",
       `¿Eliminar "${rec.title}"? Esta acción no se puede deshacer.`,
       [
@@ -76,7 +102,7 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
             if (res.success) {
               setRecordings((prev) => prev.filter((r) => r.id !== rec.id));
             } else {
-              Alert.alert("Error", res.message);
+              showAlert("Error", res.message);
             }
           },
         },
@@ -86,12 +112,47 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
 
   // ── Descargar ───────────────────────────────────────────────
   const handleDownload = async (rec: Recording) => {
-    const url = await recordingsService.getDownloadUrl(rec.id);
-    if (url) {
-      Linking.openURL(url);
-    } else {
-      Alert.alert("Error", "No se pudo generar el enlace de descarga.");
+    setDownloadingId(rec.id);
+    try {
+      const url = await recordingsService.getDownloadUrl(rec.id);
+      if (!url) {
+        showAlert("Error", "No se pudo generar el enlace de descarga.");
+        setDownloadingId(null);
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        // Solución Web nativa (JS Blob y Anchor para forzar descarga)
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `${rec.title}.m4a`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+      } else {
+        // Solución Móvil (Expo FileSystem y Sharing)
+        const FileSystem = await import("expo-file-system");
+        const Sharing = await import("expo-sharing");
+        
+        const safeTitle = rec.title.replace(/[^a-z0-9]/gi, '_');
+        const fileUri = `${FileSystem.documentDirectory}${safeTitle}.m4a`;
+        
+        const { uri } = await FileSystem.downloadAsync(url, fileUri);
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(uri, { dialogTitle: `Descargar ${rec.title}` });
+        } else {
+          showAlert("Error", "No se puede compartir o guardar en este dispositivo.");
+        }
+      }
+    } catch (error) {
+      showAlert("Error", "Ocurrió un problema al descargar el archivo.");
     }
+    setDownloadingId(null);
   };
 
   // ── Editar ──────────────────────────────────────────────────
@@ -105,13 +166,13 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
   const handleSaveEdit = async () => {
     if (!editTarget) return;
     if (!editTitle.trim()) {
-      Alert.alert("Error", "El título no puede estar vacío.");
+      showAlert("Error", "El título no puede estar vacío.");
       return;
     }
     setSaving(true);
     const res = await recordingsService.update(editTarget.id, {
       title: editTitle.trim(),
-      subject: editSubject,
+      subject_id: editSubject,
     });
     setSaving(false);
     if (res.success) {
@@ -120,74 +181,83 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
       );
       setEditModal(false);
     } else {
-      Alert.alert("Error", res.message);
+      showAlert("Error", res.message);
     }
   };
 
   // ── Render tarjeta ──────────────────────────────────────────
-  const RecordingCard = ({ rec }: { rec: Recording }) => (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconWrapper}>
-          <Ionicons name="mic" size={20} color="#007AFF" />
+  const RecordingCard = ({ rec }: { rec: Recording }) => {
+    const isDownloading = downloadingId === rec.id;
+    
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.iconWrapper}>
+            <Ionicons name="mic" size={20} color="#007AFF" />
+          </View>
+          <View style={styles.cardInfo}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {rec.title}
+            </Text>
+            <Text style={styles.cardSubject}>
+              {rec.subject || "Sin materia"} ·{" "}
+              {recordingsService.formatDate(rec.created_at)}
+            </Text>
+          </View>
         </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {rec.title}
-          </Text>
-          <Text style={styles.cardSubject}>
-            {rec.subject || "Sin materia"} ·{" "}
-            {recordingsService.formatDate(rec.created_at)}
-          </Text>
+
+        <View style={styles.cardMeta}>
+          <View style={styles.metaItem}>
+            <Ionicons name="time-outline" size={13} color="#999" />
+            <Text style={styles.metaText}>
+              {recordingsService.formatDuration(rec.duration)}
+            </Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Ionicons name="folder-outline" size={13} color="#999" />
+            <Text style={styles.metaText}>
+              {recordingsService.formatSize(rec.size_bytes)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => openEdit(rec)}
+          >
+            <Ionicons name="pencil-outline" size={16} color="#007AFF" />
+            <Text style={[styles.actionText, { color: "#007AFF" }]}>Editar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => handleDownload(rec)}
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <ActivityIndicator size="small" color="#34C759" />
+            ) : (
+              <Ionicons name="download-outline" size={16} color="#34C759" />
+            )}
+            <Text style={[styles.actionText, { color: "#34C759" }]}>
+              Descargar
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => handleDelete(rec)}
+          >
+            <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+            <Text style={[styles.actionText, { color: "#FF3B30" }]}>
+              Eliminar
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
-
-      <View style={styles.cardMeta}>
-        <View style={styles.metaItem}>
-          <Ionicons name="time-outline" size={13} color="#999" />
-          <Text style={styles.metaText}>
-            {recordingsService.formatDuration(rec.duration)}
-          </Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Ionicons name="folder-outline" size={13} color="#999" />
-          <Text style={styles.metaText}>
-            {recordingsService.formatSize(rec.size_bytes)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.cardActions}>
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => openEdit(rec)}
-        >
-          <Ionicons name="pencil-outline" size={16} color="#007AFF" />
-          <Text style={[styles.actionText, { color: "#007AFF" }]}>Editar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => handleDownload(rec)}
-        >
-          <Ionicons name="download-outline" size={16} color="#34C759" />
-          <Text style={[styles.actionText, { color: "#34C759" }]}>
-            Descargar
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => handleDelete(rec)}
-        >
-          <Ionicons name="trash-outline" size={16} color="#FF3B30" />
-          <Text style={[styles.actionText, { color: "#FF3B30" }]}>
-            Eliminar
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -296,6 +366,40 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
                   <Text style={styles.saveBtnText}>Guardar</Text>
                 )}
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal: Custom Alert (Cross-Platform) ─────────────────────────── */}
+      <Modal visible={customAlert.visible} transparent animationType="fade">
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertCard}>
+            <Text style={styles.alertTitle}>{customAlert.title}</Text>
+            <Text style={styles.alertMessage}>{customAlert.message}</Text>
+            <View style={styles.alertButtonContainer}>
+              {customAlert.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.alertButton, idx > 0 && styles.alertButtonBorder]}
+                  onPress={() => {
+                    closeAlert();
+                    if (btn.onPress) {
+                      setTimeout(btn.onPress, 300);
+                    }
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.alertButtonText,
+                      btn.style === "cancel" && styles.alertButtonTextCancel,
+                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                    ]}
+                  >
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </View>
@@ -451,4 +555,53 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnText: { color: "#FFF", fontWeight: "600" },
+
+  // Custom Alert Styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  alertCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    paddingTop: 24,
+    width: "100%",
+    maxWidth: 320,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 8,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 24,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertButtonContainer: {
+    flexDirection: "row",
+    width: "100%",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E8E8",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alertButtonBorder: { borderLeftWidth: 1, borderLeftColor: "#E8E8E8" },
+  alertButtonText: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
+  alertButtonTextCancel: { color: "#999", fontWeight: "400" },
+  alertButtonTextDestructive: { color: "#FF3B30", fontWeight: "600" },
 });

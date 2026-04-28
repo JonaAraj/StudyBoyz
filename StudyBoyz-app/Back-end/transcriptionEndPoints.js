@@ -163,6 +163,9 @@ const getTranscription = async (req, res) => {
     const userId = req.user.id;
 
     const transcription = await Transcription.findByRecording(id, userId);
+    
+    const Grabacion = require("./models/Grabacion");
+    const recording = await Grabacion.findByIdAndUser(id, userId);
 
     if (!transcription) {
       return res.status(404).json({
@@ -172,7 +175,11 @@ const getTranscription = async (req, res) => {
       });
     }
 
-    return res.json({ success: true, transcription });
+    return res.json({ 
+      success: true, 
+      transcription,
+      markers: recording?.markers || [] 
+    });
   } catch (err) {
     console.error("[GET TRANSCRIPTION]", err);
     return res.status(500).json({ success: false, message: err.message });

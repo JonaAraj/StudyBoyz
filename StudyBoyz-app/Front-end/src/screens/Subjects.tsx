@@ -14,7 +14,6 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
-  Alert,
   ScrollView,
   RefreshControl,
 } from "react-native";
@@ -27,6 +26,12 @@ type SubjectsProps = {
   onNavigateToRecientes: () => void;
   onNavigateToSubjectDetail?: (subject: Subject, index: number) => void;
 };
+
+interface AlertButton {
+  text: string;
+  style?: "default" | "cancel" | "destructive";
+  onPress?: () => void;
+}
 
 // ── Tarjeta de materia ───────────────────────────────────────
 function SubjectCard({
@@ -136,6 +141,24 @@ export const Subjects = ({
   const [editIcon, setEditIcon] = useState("book-outline");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Custom Alert Modal (Reemplaza a Alert nativo para compatibilidad Web/Móvil)
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons: AlertButton[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (title: string, message: string, buttons?: AlertButton[]) => {
+    setCustomAlert({
+      visible: true,
+      title,
+      message,
+      buttons: buttons || [{ text: "OK" }],
+    });
+  };
+  const closeAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     const data = await subjectService.getAll();
@@ -160,7 +183,7 @@ export const Subjects = ({
       setNewIcon("book-outline");
       load(true);
     } else {
-      Alert.alert("Error", res.message || "No se pudo crear la materia.");
+      showAlert("Error", res.message || "No se pudo crear la materia.");
     }
   };
 
@@ -186,14 +209,14 @@ export const Subjects = ({
       setOptionsModal(false);
       load(true);
     } else {
-      Alert.alert("Error", res.message || "No se pudo actualizar.");
+      showAlert("Error", res.message || "No se pudo actualizar.");
     }
   };
 
   // ── Eliminar materia ───────────────────────────────────────
   const handleDelete = () => {
     if (!optionsTarget) return;
-    Alert.alert(
+    showAlert(
       "Eliminar materia",
       `¿Eliminar "${optionsTarget.name}"? Las grabaciones no serán eliminadas, solo quedarán sin materia asignada.`,
       [
@@ -207,7 +230,7 @@ export const Subjects = ({
             if (res.success) {
               load(true);
             } else {
-              Alert.alert("Error", res.message || "No se pudo eliminar.");
+              showAlert("Error", res.message || "No se pudo eliminar.");
             }
           },
         },
@@ -432,6 +455,40 @@ export const Subjects = ({
           </View>
         </View>
       </Modal>
+
+      {/* ── Modal: Custom Alert (Cross-Platform) ─────────────────────────── */}
+      <Modal visible={customAlert.visible} transparent animationType="fade">
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertCard}>
+            <Text style={styles.alertTitle}>{customAlert.title}</Text>
+            <Text style={styles.alertMessage}>{customAlert.message}</Text>
+            <View style={styles.alertButtonContainer}>
+              {customAlert.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.alertButton, idx > 0 && styles.alertButtonBorder]}
+                  onPress={() => {
+                    closeAlert();
+                    if (btn.onPress) {
+                      setTimeout(btn.onPress, 300); // Dar tiempo a que cierre el actual
+                    }
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.alertButtonText,
+                      btn.style === "cancel" && styles.alertButtonTextCancel,
+                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                    ]}
+                  >
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -618,4 +675,56 @@ const styles = StyleSheet.create({
     backgroundColor: "#EBF4FF",
   },
   iconLabel: { fontSize: 10, color: "#8E8E93", textAlign: "center" },
+
+  // Custom Alert Styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  alertCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    paddingTop: 24,
+    width: "100%",
+    maxWidth: 320,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 8,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 24,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertButtonContainer: {
+    flexDirection: "row",
+    width: "100%",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E8E8",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alertButtonBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: "#E8E8E8",
+  },
+  alertButtonText: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
+  alertButtonTextCancel: { color: "#999", fontWeight: "400" },
+  alertButtonTextDestructive: { color: "#FF3B30", fontWeight: "600" },
 });

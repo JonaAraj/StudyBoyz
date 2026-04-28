@@ -7,7 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import subjectService, { type Subject } from "./subjectService";
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://studyboyz.onrender.com/api';
 
 const getToken = async () => AsyncStorage.getItem("@studyboyz_token");
 
@@ -18,6 +18,7 @@ interface SaveRecordingParams {
   durationMillis: number;
   title: string;
   subjectId: string; // UUID de la materia (antes era subject: string)
+  markers?: number[]; // Puntos importantes marcados durante la grabación
 }
 
 interface UploadExternalParams {
@@ -58,7 +59,12 @@ const recordingApiService = {
       }
 
       formData.append("title", params.title);
-      formData.append("subject_id", params.subjectId);
+      if (params.subjectId) {
+        formData.append("subject_id", params.subjectId);
+      }
+      if (params.markers && params.markers.length > 0) {
+        formData.append("markers", JSON.stringify(params.markers));
+      }
       formData.append(
         "duration",
         Math.floor(params.durationMillis / 1000).toString()

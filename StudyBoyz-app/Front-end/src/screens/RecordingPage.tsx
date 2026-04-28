@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -39,6 +38,12 @@ const formatDuration = (millis: number): string => {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${pad(h)}:${pad(m)}:${pad(s)}`;
 };
+
+interface AlertButton {
+  text: string;
+  style?: "default" | "cancel" | "destructive";
+  onPress?: () => void;
+}
 
 export default function RecordingPage({
   onNavigateToSubjects,
@@ -72,6 +77,27 @@ export default function RecordingPage({
   const [uploadModal, setUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
+
+  // Marcadores de puntos importantes (tiempos en milisegundos)
+  const [markers, setMarkers] = useState<number[]>([]);
+
+  // Custom Alert Modal (Reemplaza a Alert nativo para compatibilidad Web/Móvil)
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons: AlertButton[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (title: string, message: string, buttons?: AlertButton[]) => {
+    setCustomAlert({
+      visible: true,
+      title,
+      message,
+      buttons: buttons || [{ text: "OK" }],
+    });
+  };
+  const closeAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   // Animación dot
   const dotOpacity = useRef(new Animated.Value(1)).current;
@@ -113,6 +139,7 @@ export default function RecordingPage({
 
   // ── Iniciar ──────────────────────────────────────────────────
   const handleStart = async () => {
+    setMarkers([]);
     await startRecording();
   };
 
@@ -124,10 +151,7 @@ export default function RecordingPage({
 
   // ── Marcar punto ─────────────────────────────────────────────
   const handleMarkPoint = () => {
-    Alert.alert(
-      "📍 Punto marcado",
-      `Marca registrada en ${formatDuration(durationMillis)}`,
-    );
+    setMarkers((prev) => [...prev, durationMillis]);
   };
 
   // ── Detener → abrir modal ────────────────────────────────────
@@ -157,7 +181,7 @@ export default function RecordingPage({
       setSelectedSubject(newSubject);
       setCustomSubjectName("");
     } else {
-      Alert.alert("Error", res.message || "No se pudo crear la materia.");
+      showAlert("Error", res.message || "No se pudo crear la materia.");
     }
   };
 
@@ -167,7 +191,7 @@ export default function RecordingPage({
 
     // Si hay texto en customSubjectName sin haber creado → crear primero
     if (customSubjectName.trim() && !selectedSubject) {
-      Alert.alert(
+      showAlert(
         "Materia sin crear",
         `¿Deseas crear la materia "${customSubjectName.trim()}" y guardar?`,
         [
@@ -184,7 +208,7 @@ export default function RecordingPage({
               if (res.success && res.subject) {
                 await doSave(res.subject.id);
               } else {
-                Alert.alert(
+                showAlert(
                   "Error",
                   res.message || "No se pudo crear la materia.",
                 );
@@ -197,7 +221,7 @@ export default function RecordingPage({
     }
 
     if (!selectedSubject) {
-      Alert.alert(
+      showAlert(
         "Materia requerida",
         "Selecciona una materia antes de guardar.",
       );
@@ -219,13 +243,15 @@ export default function RecordingPage({
         recordingTitle.trim() ||
         `Grabación ${new Date().toLocaleDateString("es-MX")}`,
       subjectId,
+        markers,
     });
     setSaving(false);
 
     if (res.success) {
+      setMarkers([]);
       setSaveModal(false);
       setPendingResult(null);
-      Alert.alert(
+      showAlert(
         "✅ Guardado",
         "Tu grabación se guardó. La transcripción comenzará en unos segundos.",
         [
@@ -234,13 +260,13 @@ export default function RecordingPage({
         ],
       );
     } else {
-      Alert.alert("Error", res.message);
+      showAlert("Error", res.message);
     }
   };
 
   // ── Descartar ────────────────────────────────────────────────
   const handleDiscard = () => {
-    Alert.alert("Descartar", "¿Seguro? No se puede recuperar.", [
+    showAlert("Descartar", "¿Seguro? No se puede recuperar.", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Descartar",
@@ -248,6 +274,8 @@ export default function RecordingPage({
         onPress: () => {
           setSaveModal(false);
           setPendingResult(null);
+            setMarkers([]);
+            setTimeout(() => showAlert("Descartado", "La grabación ha sido descartada."), 300);
         },
       },
     ]);
@@ -255,14 +283,15 @@ export default function RecordingPage({
 
   // ── Cancelar grabación activa ────────────────────────────────
   const handleCancel = () => {
-    Alert.alert("Cancelar", "¿Descartar la grabación actual?", [
+    showAlert("Cancelar", "¿Descartar la grabación actual?", [
       { text: "No", style: "cancel" },
       {
         text: "Sí, descartar",
         style: "destructive",
         onPress: async () => {
           await cancelRecording();
-          onNavigateToSubjects?.();
+            setMarkers([]);
+            setTimeout(() => showAlert("Cancelado", "Se ha cancelado la grabación."), 300);
         },
       },
     ]);
@@ -296,12 +325,12 @@ export default function RecordingPage({
         }, 2000);
       } else {
         setUploadModal(false);
-        Alert.alert("Error", res.message);
+        showAlert("Error", res.message);
       }
     } catch (err: any) {
       setUploading(false);
       setUploadModal(false);
-      Alert.alert("Error", err.message || "No se pudo subir el archivo.");
+      showAlert("Error", err.message || "No se pudo subir el archivo.");
     }
   };
 
@@ -446,7 +475,7 @@ export default function RecordingPage({
               >
                 <Ionicons name="flag" size={18} color="#FFF" />
                 <Text style={styles.flagButtonText}>
-                  Marcar punto importante
+                  {markers.length > 0 ? `Marcar punto (${markers.length})` : "Marcar punto importante"}
                 </Text>
               </TouchableOpacity>
 
@@ -659,6 +688,40 @@ export default function RecordingPage({
               {uploading ? "Subiendo audio..." : "¡Listo!"}
             </Text>
             <Text style={styles.uploadText}>{uploadMessage}</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal: Custom Alert (Cross-Platform) ─────────────────────────── */}
+      <Modal visible={customAlert.visible} transparent animationType="fade">
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertCard}>
+            <Text style={styles.alertTitle}>{customAlert.title}</Text>
+            <Text style={styles.alertMessage}>{customAlert.message}</Text>
+            <View style={styles.alertButtonContainer}>
+              {customAlert.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.alertButton, idx > 0 && styles.alertButtonBorder]}
+                  onPress={() => {
+                    closeAlert();
+                    if (btn.onPress) {
+                      setTimeout(btn.onPress, 300); // Dar tiempo a que cierre el actual
+                    }
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.alertButtonText,
+                      btn.style === "cancel" && styles.alertButtonTextCancel,
+                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                    ]}
+                  >
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
       </Modal>
@@ -958,4 +1021,56 @@ const styles = StyleSheet.create({
   },
   uploadTitle: { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
   uploadText: { fontSize: 14, color: "#666", textAlign: "center" },
+
+  // Custom Alert Styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  alertCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    paddingTop: 24,
+    width: "100%",
+    maxWidth: 320,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 8,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 24,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertButtonContainer: {
+    flexDirection: "row",
+    width: "100%",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E8E8",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alertButtonBorder: {
+    borderLeftWidth: 1,
+    borderLeftColor: "#E8E8E8",
+  },
+  alertButtonText: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
+  alertButtonTextCancel: { color: "#999", fontWeight: "400" },
+  alertButtonTextDestructive: { color: "#FF3B30", fontWeight: "600" },
 });
