@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import recordingsService from "../../services/recordingsService";
 import type { Recording } from "../../services/recordingsService";
+import TranscriptionView from "./TranscriptionView";
 
 // Materias disponibles para reasignar
 const MATERIAS = [
@@ -52,6 +53,9 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
 
   // Descarga
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Vista transcripción inline
+  const [transcriptionRec, setTranscriptionRec] = useState<Recording | null>(null);
 
   // Custom Alert Modal (Reemplaza a Alert nativo)
   const [customAlert, setCustomAlert] = useState<{
@@ -159,7 +163,8 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
   const openEdit = (rec: Recording) => {
     setEditTarget(rec);
     setEditTitle(rec.title);
-    setEditSubject(rec.subject || "");
+    // @ts-ignore - Soporte para la relación subjects(name) de Supabase
+    setEditSubject(rec.subjects?.name || rec.subject || "");
     setEditModal(true);
   };
 
@@ -185,6 +190,19 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
     }
   };
 
+  // ── Transcripción ──────────────────────────────────────────
+  if (transcriptionRec) {
+    return (
+      <TranscriptionView
+        recordingId={transcriptionRec.id}
+        recordingTitle={transcriptionRec.title}
+        recordingSubject={(transcriptionRec as any).subjects?.name || (transcriptionRec as any).subject || ""}
+        transcriptStatus={(transcriptionRec as any).transcript_status}
+        onBack={() => setTranscriptionRec(null)}
+      />
+    );
+  }
+
   // ── Render tarjeta ──────────────────────────────────────────
   const RecordingCard = ({ rec }: { rec: Recording }) => {
     const isDownloading = downloadingId === rec.id;
@@ -200,7 +218,8 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
               {rec.title}
             </Text>
             <Text style={styles.cardSubject}>
-              {rec.subject || "Sin materia"} ·{" "}
+              {/* @ts-ignore */}
+              {rec.subjects?.name || rec.subject || "Sin materia"} ·{" "}
               {recordingsService.formatDate(rec.created_at)}
             </Text>
           </View>
@@ -222,6 +241,14 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
         </View>
 
         <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => setTranscriptionRec(rec)}
+          >
+            <Ionicons name="document-text-outline" size={16} color="#5856D6" />
+            <Text style={[styles.actionText, { color: "#5856D6" }]}>Ver</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => openEdit(rec)}

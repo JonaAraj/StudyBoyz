@@ -86,7 +86,7 @@ const uploadAudioExternal = async (req, res) => {
           title: title || req.file.originalname,
           file_path: path,
           size_bytes: req.file.size,
-          subject: subject || null,
+          subject_id: subject || null,
           user_id: userId,
           transcript_status: "pending",
         },

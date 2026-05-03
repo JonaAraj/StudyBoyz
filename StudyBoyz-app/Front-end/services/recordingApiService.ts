@@ -27,6 +27,7 @@ interface UploadExternalParams {
   mimeType: string;
   title?: string;
   subjectId?: string; // UUID opcional
+  blob?: Blob; // Añadido para mejor soporte en Web
 }
 
 const recordingApiService = {
@@ -95,11 +96,35 @@ const recordingApiService = {
       const token = await getToken();
       const formData = new FormData();
 
-      formData.append("audio", {
-        uri: params.uri,
-        name: params.name,
-        type: params.mimeType,
-      } as any);
+      // Fallback para asegurar el mimeType correcto (muy útil para .ogg y otros formatos si el sistema no lo detecta)
+      let finalMimeType = params.mimeType;
+      if (!finalMimeType || finalMimeType === 'application/octet-stream') {
+        const lowerName = params.name.toLowerCase();
+        if (lowerName.endsWith('.ogg')) finalMimeType = 'audio/ogg';
+        else if (lowerName.endsWith('.m4a')) finalMimeType = 'audio/m4a';
+        else if (lowerName.endsWith('.mp3')) finalMimeType = 'audio/mpeg';
+        else if (lowerName.endsWith('.wav')) finalMimeType = 'audio/wav';
+        else if (lowerName.endsWith('.mp4')) finalMimeType = 'audio/mp4';
+        else if (lowerName.endsWith('.webm')) finalMimeType = 'audio/webm';
+      }
+
+      // Soporte cruzado para Mobile y Web
+      if (Platform.OS === "web") {
+        if (params.blob) {
+          formData.append("audio", params.blob, params.name);
+        } else {
+          // Si en web solo enviaron la URI (blob:http://...), intentamos transformarlo a un Blob real
+          const response = await fetch(params.uri);
+          const blob = await response.blob();
+          formData.append("audio", blob, params.name);
+        }
+      } else {
+        formData.append("audio", {
+          uri: params.uri,
+          name: params.name,
+          type: finalMimeType,
+        } as any);
+      }
 
       if (params.title) formData.append("title", params.title);
       if (params.subjectId) formData.append("subject_id", params.subjectId);

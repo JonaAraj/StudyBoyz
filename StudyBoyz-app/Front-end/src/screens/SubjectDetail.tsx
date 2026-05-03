@@ -261,22 +261,20 @@ export default function SubjectDetail({
           {/* Botones de acción */}
           <View style={styles.recActions}>
             {/* Ver transcripción */}
-            {item.transcript_status === "done" && (
-              <TouchableOpacity
-                style={[styles.actionChip, { backgroundColor: bg }]}
-                onPress={() => setTranscriptionRec(item)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={14}
-                  color={accent}
-                />
-                <Text style={[styles.actionChipText, { color: accent }]}>
-                  Ver
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={[styles.actionChip, { backgroundColor: bg }]}
+              onPress={() => setTranscriptionRec(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={14}
+                color={accent}
+              />
+              <Text style={[styles.actionChipText, { color: accent }]}>
+                Ver
+              </Text>
+            </TouchableOpacity>
 
             {/* Descargar */}
             <TouchableOpacity

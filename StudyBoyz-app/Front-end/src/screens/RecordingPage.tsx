@@ -372,30 +372,7 @@ export default function RecordingPage({
           </TouchableOpacity>
         </View>
 
-        {/* Materia actual (indicador visual) */}
-        <View style={styles.subjectSection}>
-          <Text style={styles.subjectLabel}>Materia Actual</Text>
-          <View style={styles.subjectSelector}>
-            <View style={styles.subjectContent}>
-              <View
-                style={[
-                  styles.subjectDot,
-                  { backgroundColor: isActive ? "#007AFF" : "#D0D0D0" },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.subjectName,
-                  { color: isActive ? "#333" : "#aaa" },
-                ]}
-              >
-                {isActive
-                  ? "Se asignará al guardar"
-                  : "Sin materia seleccionada"}
-              </Text>
-            </View>
-          </View>
-        </View>
+        
 
         {/* Visualización */}
         <View style={styles.vizCard}>
