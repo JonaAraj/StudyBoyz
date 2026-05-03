@@ -1,7 +1,7 @@
 // ============================================================
 // screens/SubjectDetail.tsx
 // Muestra las grabaciones de una materia con opciones:
-// editar título, eliminar, ver transcripción
+// editar título, eliminar, descargar, ver transcripción
 // ============================================================
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -34,12 +34,18 @@ type Props = {
   onNavigateToRecording?: () => void;
 };
 
-const statusConfig = {
+const statusConfig: Record<
+  string,
+  { label: string; color: string; bg: string }
+> = {
   pending: { label: "Pendiente", color: "#8E8E93", bg: "#F2F2F7" },
   processing: { label: "Procesando", color: "#FF9500", bg: "#FFF3E0" },
   done: { label: "Transcrito", color: "#34C759", bg: "#E8FAF0" },
   error: { label: "Error", color: "#FF3B30", bg: "#FFE8E8" },
 };
+
+const getStatus = (s: string | null) =>
+  statusConfig[s ?? "pending"] ?? statusConfig.pending;
 
 export default function SubjectDetail({
   subject,
@@ -58,6 +64,9 @@ export default function SubjectDetail({
   const [editTarget, setEditTarget] = useState<SubjectRecording | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Descarga
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Vista transcripción inline
   const [transcriptionRec, setTranscriptionRec] =
@@ -80,6 +89,7 @@ export default function SubjectDetail({
     load();
   }, [load]);
 
+  // ── Eliminar ───────────────────────────────────────────────
   const handleDelete = (rec: SubjectRecording) => {
     Alert.alert(
       "Eliminar grabación",
@@ -92,12 +102,12 @@ export default function SubjectDetail({
           onPress: async () => {
             const res = await recordingsService.delete(
               rec.id,
-              rec.file_path || "",
+              rec.file_path ?? "",
             );
             if (res.success) {
               setRecordings((prev) => prev.filter((r) => r.id !== rec.id));
             } else {
-              Alert.alert("Error", res.message || "No se pudo eliminar.");
+              Alert.alert("Error", res.message ?? "No se pudo eliminar.");
             }
           },
         },
@@ -122,6 +132,7 @@ export default function SubjectDetail({
     }
   };
 
+  // ── Editar ─────────────────────────────────────────────────
   const openEdit = (rec: SubjectRecording) => {
     setEditTarget(rec);
     setEditTitle(rec.title);
@@ -143,11 +154,23 @@ export default function SubjectDetail({
       );
       setEditModal(false);
     } else {
-      Alert.alert("Error", res.message || "No se pudo actualizar.");
+      Alert.alert("Error", res.message ?? "No se pudo actualizar.");
     }
   };
 
-  // Si hay transcripción abierta, renderizar TranscriptionView
+  // ── Descargar ──────────────────────────────────────────────
+  const handleDownload = async (rec: SubjectRecording) => {
+    setDownloadingId(rec.id);
+    const url = await recordingsService.getDownloadUrl(rec.id);
+    setDownloadingId(null);
+    if (url) {
+      await Linking.openURL(url);
+    } else {
+      Alert.alert("Error", "No se pudo obtener el enlace de descarga.");
+    }
+  };
+
+  // ── Transcripción ──────────────────────────────────────────
   if (transcriptionRec) {
     return (
       <TranscriptionView
@@ -160,10 +183,14 @@ export default function SubjectDetail({
     );
   }
 
+  // ── Render item ────────────────────────────────────────────
   const renderItem = ({ item }: { item: SubjectRecording }) => {
-    const status = statusConfig[item.transcript_status] || statusConfig.pending;
+    const status = getStatus(item.transcript_status);
+    const isDownloading = downloadingId === item.id;
+
     return (
       <View style={styles.recCard}>
+        {/* Cabecera */}
         <View style={styles.recHeader}>
           <View style={[styles.recIconWrap, { backgroundColor: bg }]}>
             <Ionicons name="mic" size={18} color={accent} />
@@ -182,20 +209,23 @@ export default function SubjectDetail({
           </View>
         </View>
 
-        {/* Badge estado */}
+        {/* Footer: badge + acciones */}
         <View style={styles.recFooter}>
-          <View style={[styles.badge, { backgroundColor: status.bg }]}>
-            <Text style={[styles.badgeText, { color: status.color }]}>
-              {status.label}
+          {/* Badge estado */}
+          <View style={[styles.badge, { backgroundColor: status?.bg }]}>
+            <Text style={[styles.badgeText, { color: status?.color }]}>
+              {status?.label}
             </Text>
           </View>
 
+          {/* Botones de acción */}
           <View style={styles.recActions}>
             {/* Ver transcripción */}
             {item.transcript_status === "done" && (
               <TouchableOpacity
                 style={[styles.actionChip, { backgroundColor: bg }]}
                 onPress={() => setTranscriptionRec(item)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Ionicons
                   name="document-text-outline"
@@ -208,18 +238,11 @@ export default function SubjectDetail({
               </TouchableOpacity>
             )}
 
-            {/* Descargar */}
-            <TouchableOpacity
-              style={styles.iconBtn}
-              onPress={() => handleDownload(item)}
-            >
-              <Ionicons name="download-outline" size={18} color="#007AFF" />
-            </TouchableOpacity>
-
             {/* Editar */}
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => openEdit(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="pencil-outline" size={18} color="#8E8E93" />
             </TouchableOpacity>
@@ -228,6 +251,7 @@ export default function SubjectDetail({
             <TouchableOpacity
               style={styles.iconBtn}
               onPress={() => handleDelete(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="trash-outline" size={18} color="#FF3B30" />
             </TouchableOpacity>
@@ -269,7 +293,7 @@ export default function SubjectDetail({
         )}
       </View>
 
-      {/* Lista */}
+      {/* Contenido */}
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={accent} />
@@ -440,10 +464,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginTop: 4,
   },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+    flexShrink: 1,
+  },
   badgeText: { fontSize: 11, fontWeight: "600" },
-  recActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  recActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    flexShrink: 0,
+  },
   actionChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -451,9 +486,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
+    marginRight: 2,
   },
   actionChipText: { fontSize: 12, fontWeight: "600" },
-  iconBtn: { padding: 6 },
+  iconBtn: {
+    padding: 6,
+    minWidth: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   modalOverlay: {
     flex: 1,
