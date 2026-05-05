@@ -12,12 +12,12 @@ import {
   TouchableOpacity,
   SafeAreaView,
   FlatList,
-  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
   RefreshControl,
   Linking,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import subjectService, {
@@ -33,6 +33,12 @@ type Props = {
   onBack: () => void;
   onNavigateToRecording?: () => void;
 };
+
+interface AlertButton {
+  text: string;
+  style?: "default" | "cancel" | "destructive";
+  onPress?: () => void;
+}
 
 const statusConfig: Record<
   string,
@@ -72,6 +78,24 @@ export default function SubjectDetail({
   const [transcriptionRec, setTranscriptionRec] =
     useState<SubjectRecording | null>(null);
 
+  // Custom Alert Modal (Reemplaza a Alert nativo)
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    buttons: AlertButton[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (title: string, message: string, buttons?: AlertButton[]) => {
+    setCustomAlert({
+      visible: true,
+      title,
+      message,
+      buttons: buttons || [{ text: "OK" }],
+    });
+  };
+  const closeAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
@@ -91,7 +115,7 @@ export default function SubjectDetail({
 
   // ── Eliminar ───────────────────────────────────────────────
   const handleDelete = (rec: SubjectRecording) => {
-    Alert.alert(
+    showAlert(
       "Eliminar grabación",
       `¿Seguro que deseas eliminar "${rec.title}"?`,
       [
@@ -107,7 +131,7 @@ export default function SubjectDetail({
             if (res.success) {
               setRecordings((prev) => prev.filter((r) => r.id !== rec.id));
             } else {
-              Alert.alert("Error", res.message ?? "No se pudo eliminar.");
+              showAlert("Error", res.message ?? "No se pudo eliminar.");
             }
           },
         },
@@ -154,20 +178,53 @@ export default function SubjectDetail({
       );
       setEditModal(false);
     } else {
-      Alert.alert("Error", res.message ?? "No se pudo actualizar.");
+      showAlert("Error", res.message ?? "No se pudo actualizar.");
     }
   };
 
   // ── Descargar ──────────────────────────────────────────────
   const handleDownload = async (rec: SubjectRecording) => {
     setDownloadingId(rec.id);
-    const url = await recordingsService.getDownloadUrl(rec.id);
-    setDownloadingId(null);
-    if (url) {
-      await Linking.openURL(url);
-    } else {
-      Alert.alert("Error", "No se pudo obtener el enlace de descarga.");
+    try {
+      const url = await recordingsService.getDownloadUrl(rec.id);
+      if (!url) {
+        showAlert("Error", "No se pudo obtener el enlace de descarga.");
+        setDownloadingId(null);
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        // Solución Web nativa (JS Blob y Anchor para forzar descarga)
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `${rec.title}.m4a`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(blobUrl);
+      } else {
+        // Solución Móvil (Expo FileSystem y Sharing)
+        const FileSystem = await import("expo-file-system");
+        const Sharing = await import("expo-sharing");
+        
+        const safeTitle = rec.title.replace(/[^a-z0-9]/gi, '_');
+        const fileUri = `${FileSystem.documentDirectory}${safeTitle}.m4a`;
+        
+        const { uri } = await FileSystem.downloadAsync(url, fileUri);
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(uri, { dialogTitle: `Descargar ${rec.title}` });
+        } else {
+          showAlert("Error", "No se puede compartir o guardar en este dispositivo.");
+        }
+      }
+    } catch (error) {
+      showAlert("Error", "Ocurrió un problema al descargar el archivo.");
     }
+    setDownloadingId(null);
   };
 
   // ── Transcripción ──────────────────────────────────────────
@@ -221,22 +278,20 @@ export default function SubjectDetail({
           {/* Botones de acción */}
           <View style={styles.recActions}>
             {/* Ver transcripción */}
-            {item.transcript_status === "done" && (
-              <TouchableOpacity
-                style={[styles.actionChip, { backgroundColor: bg }]}
-                onPress={() => setTranscriptionRec(item)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name="document-text-outline"
-                  size={14}
-                  color={accent}
-                />
-                <Text style={[styles.actionChipText, { color: accent }]}>
-                  Ver
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={[styles.actionChip, { backgroundColor: bg }]}
+              onPress={() => setTranscriptionRec(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name="document-text-outline"
+                size={14}
+                color={accent}
+              />
+              <Text style={[styles.actionChipText, { color: accent }]}>
+                Ver
+              </Text>
+            </TouchableOpacity>
 
             {/* Editar */}
             <TouchableOpacity
@@ -373,6 +428,40 @@ export default function SubjectDetail({
                   <Text style={styles.saveText}>Guardar</Text>
                 )}
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Modal: Custom Alert (Cross-Platform) ─────────────────────────── */}
+      <Modal visible={customAlert.visible} transparent animationType="fade">
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertCard}>
+            <Text style={styles.alertTitle}>{customAlert.title}</Text>
+            <Text style={styles.alertMessage}>{customAlert.message}</Text>
+            <View style={styles.alertButtonContainer}>
+              {customAlert.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.alertButton, idx > 0 && styles.alertButtonBorder]}
+                  onPress={() => {
+                    closeAlert();
+                    if (btn.onPress) {
+                      setTimeout(btn.onPress, 300);
+                    }
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.alertButtonText,
+                      btn.style === "cancel" && styles.alertButtonTextCancel,
+                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                    ]}
+                  >
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </View>
@@ -559,4 +648,53 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   saveText: { color: "#FFF", fontWeight: "600", fontSize: 15 },
+
+  // Custom Alert Styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  alertCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    paddingTop: 24,
+    width: "100%",
+    maxWidth: 320,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: 8,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 24,
+    paddingHorizontal: 20,
+    textAlign: "center",
+  },
+  alertButtonContainer: {
+    flexDirection: "row",
+    width: "100%",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E8E8",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alertButtonBorder: { borderLeftWidth: 1, borderLeftColor: "#E8E8E8" },
+  alertButtonText: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
+  alertButtonTextCancel: { color: "#999", fontWeight: "400" },
+  alertButtonTextDestructive: { color: "#FF3B30", fontWeight: "600" },
 });

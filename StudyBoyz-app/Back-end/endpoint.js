@@ -34,14 +34,14 @@ router.post('/auth/register', async (req, res) => {
       return res.status(409).json({ success: false, message: 'Ese nombre de usuario ya está en uso.' });
 
     const newUser = await Usuario.create({ userName, email, password });
-    const token = generateToken({ id: newUser.id, userName: newUser.userName, email: newUser.Email });
+    const token = generateToken({ id: newUser.id, userName: newUser.userName, email: newUser.email });
 
     return res.status(201).json({
       success: true, message: '¡Cuenta creada exitosamente!', token,
-      user: { id: newUser.id, userName: newUser.userName, email: newUser.Email, createdAt: newUser.created_at },
+      user: { id: newUser.id, userName: newUser.userName, email: newUser.email, createdAt: newUser.created_at },
     });
   } catch (err) {
-    console.error('[REGISTER]', err);
+    console.error('[REGISTER] Error completo:', err);
     return res.status(500).json({ success: false, message: 'Error interno del servidor.' });
   }
 });
@@ -58,13 +58,13 @@ router.post('/auth/login', async (req, res) => {
     if (!user || !(await Usuario.verifyPassword(password, user.password)))
       return res.status(401).json({ success: false, message: 'Credenciales incorrectas.' });
 
-    const token = generateToken({ id: user.id, userName: user.userName, email: user.Email });
+    const token = generateToken({ id: user.id, userName: user.userName, email: user.email });
     return res.status(200).json({
       success: true, message: '¡Sesión iniciada!', token,
-      user: { id: user.id, userName: user.userName, email: user.Email, createdAt: user.created_at },
+      user: { id: user.id, userName: user.userName, email: user.email, createdAt: user.created_at },
     });
   } catch (err) {
-    console.error('[LOGIN]', err);
+    console.error('[LOGIN] Error completo:', err);
     return res.status(500).json({ success: false, message: 'Error interno del servidor.' });
   }
 });
@@ -75,10 +75,10 @@ router.get('/auth/me', requireAuth, async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
     return res.json({
       success: true,
-      user: { id: user.id, userName: user.userName, email: user.Email, createdAt: user.created_at },
+      user: { id: user.id, userName: user.userName, email: user.email, createdAt: user.created_at },
     });
   } catch (err) {
-    console.error('[ME]', err);
+    console.error('[ME] Error completo:', err);
     return res.status(500).json({ success: false, message: 'Error interno.' });
   }
 });
@@ -104,7 +104,8 @@ router.get('/recordings', requireAuth, async (req, res) => {
 // PUT /recordings/:id — actualiza título y/o materia (subject_id UUID)
 router.put('/recordings/:id', requireAuth, async (req, res) => {
   try {
-    const { title, subject_id } = req.body;
+    let { title, subject_id } = req.body;
+    if (subject_id === 'null' || subject_id === 'undefined' || subject_id === '') subject_id = null;
 
     // Validar que subject_id sea UUID válido si se envía
     if (subject_id !== undefined && subject_id !== null) {
@@ -156,7 +157,8 @@ router.post('/recordings/save', requireAuth, upload.single('audio'), async (req,
     if (!req.file)
       return res.status(400).json({ success: false, message: 'No se recibió archivo de audio.' });
 
-    const { title, subject_id, duration } = req.body;
+    let { title, subject_id, duration, markers } = req.body;
+    if (subject_id === 'null' || subject_id === 'undefined' || subject_id === '') subject_id = null;
     const userId = req.user.id;
 
     // Validar subject_id si se envió
@@ -185,6 +187,15 @@ router.post('/recordings/save', requireAuth, upload.single('audio'), async (req,
 
     const filePath = `audio/${filename}`;
 
+    let parsedMarkers = [];
+    if (markers) {
+      try {
+        parsedMarkers = JSON.parse(markers);
+      } catch (e) {
+        console.error("Error al parsear markers", e);
+      }
+    }
+
     // Insertar registro con subject_id directo — sin syncFromRecording
     const { data: recording, error: dbError } = await supabaseAdmin
       .from('recordings')
@@ -192,10 +203,11 @@ router.post('/recordings/save', requireAuth, upload.single('audio'), async (req,
         title: title || `Grabación ${new Date().toLocaleDateString('es-MX')}`,
         file_path: filePath,
         size_bytes: req.file.size,
-        duration: duration ? parseInt(duration) : null,
+        duration: (duration && duration !== 'null' && duration !== 'undefined') ? parseInt(duration) : null,
         subject_id: subject_id || null,
         user_id: userId,
         transcript_status: 'pending',
+        markers: parsedMarkers,
       }])
       .select('*, subjects(name, icon)')
       .single();
@@ -221,7 +233,8 @@ router.post('/recordings/upload', requireAuth, upload.single('audio'), async (re
     if (!req.file)
       return res.status(400).json({ success: false, message: 'No se recibió archivo.' });
 
-    const { title, subject_id } = req.body;
+    let { title, subject_id } = req.body;
+    if (subject_id === 'null' || subject_id === 'undefined' || subject_id === '') subject_id = null;
     const userId = req.user.id;
 
     // Validar subject_id si se envió
@@ -294,9 +307,17 @@ router.post('/recordings/:id/transcribe', requireAuth, async (req, res) => {
 router.get('/recordings/:id/transcription', requireAuth, async (req, res) => {
   try {
     const transcription = await Transcription.findByRecording(req.params.id, req.user.id);
+    // Consultamos la grabación para extraer los puntos importantes (markers)
+    const recording = await Grabacion.findByIdAndUser(req.params.id, req.user.id);
+
     if (!transcription)
       return res.status(404).json({ success: false, message: 'Transcripción no encontrada.', status: 'pending' });
-    return res.json({ success: true, transcription });
+    
+    return res.json({ 
+      success: true, 
+      transcription, 
+      markers: recording?.markers || [] 
+    });
   } catch (err) {
     console.error('[GET TRANSCRIPTION]', err);
     return res.status(500).json({ success: false, message: err.message });

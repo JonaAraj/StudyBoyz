@@ -14,16 +14,15 @@ const Materia = {
    */
   async findByUser(userId) {
     const { data, error } = await supabaseAdmin
-      .from("recordings")
-      .select("subject")
-      .eq("user_id", userId)
-      .not("subject", "is", null);
+      .from("subjects")
+      .select("name")
+      .eq("user_id", userId);
 
     if (error) throw error;
 
     // Extraer valores únicos y ordenar
     const unique = [
-      ...new Set(data.map((r) => r.subject).filter(Boolean)),
+      ...new Set(data.map((r) => r.name).filter(Boolean)),
     ].sort();
     return unique;
   },

@@ -5,7 +5,7 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://studyboyz.onrender.com/api';
 
 export interface Transcription {
   id: string;
@@ -37,16 +37,21 @@ const transcriptionService = {
   async getByRecording(recordingId: string): Promise<{
     transcription: Transcription | null;
     status: string;
+    markers: number[];
   }> {
     try {
       const res = await apiFetch(`/recordings/${recordingId}/transcription`);
       const data = await res.json();
       if (data.success) {
-        return { transcription: data.transcription, status: "done" };
+        return { 
+          transcription: data.transcription, 
+          status: "done", 
+          markers: data.markers || [] 
+        };
       }
-      return { transcription: null, status: data.status || "pending" };
+      return { transcription: null, status: data.status || "pending", markers: [] };
     } catch {
-      return { transcription: null, status: "error" };
+      return { transcription: null, status: "error", markers: [] };
     }
   },
 
@@ -105,7 +110,7 @@ const transcriptionService = {
       } as any);
 
       if (title) formData.append("title", title);
-      if (subject) formData.append("subject", subject);
+      if (subject) formData.append("subject_id", subject);
 
       const res = await fetch(`${API_BASE_URL}/recordings/upload`, {
         method: "POST",

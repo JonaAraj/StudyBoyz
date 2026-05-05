@@ -61,20 +61,13 @@ const Subject = {
       .select('*')
       .single();
     if (error) throw error;
-    if (name) {
-      await supabaseAdmin
-        .from('recordings')
-        .update({ subject: name })
-        .eq('subject_id', id)
-        .eq('user_id', userId);
-    }
     return data;
   },
 
   async delete(id, userId) {
     await supabaseAdmin
       .from('recordings')
-      .update({ subject_id: null, subject: null })
+      .update({ subject_id: null })
       .eq('subject_id', id)
       .eq('user_id', userId);
     const { error } = await supabaseAdmin
