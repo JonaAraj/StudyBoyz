@@ -10,15 +10,16 @@ import {
   FlatList,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   Modal,
   TextInput,
   ActivityIndicator,
   ScrollView,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import subjectService, { type Subject } from "../../services/subjectService";
+import { useTheme } from "./ThemeContext";
 
 type SubjectsProps = {
   onNavigateToRecording?: () => void;
@@ -45,10 +46,11 @@ function SubjectCard({
   onPress: () => void;
   onOptionsPress: () => void;
 }) {
+  const { isDark } = useTheme();
   const { bg, accent } = subjectService.getCardColor(index);
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, isDark && styles.cardDark]}
       onPress={onPress}
       activeOpacity={0.75}
     >
@@ -62,7 +64,10 @@ function SubjectCard({
           color={accent}
         />
       </View>
-      <Text style={styles.cardTitle} numberOfLines={1}>
+      <Text
+        style={[styles.cardTitle, isDark && styles.textDark]}
+        numberOfLines={1}
+      >
         {subject.name}
       </Text>
       <Text style={styles.cardNotes}>
@@ -81,6 +86,7 @@ function IconSelector({
   selected: string;
   onSelect: (icon: string) => void;
 }) {
+  const { isDark } = useTheme();
   return (
     <ScrollView
       horizontal
@@ -93,7 +99,11 @@ function IconSelector({
         return (
           <TouchableOpacity
             key={ic.name}
-            style={[styles.iconOption, isSelected && styles.iconOptionActive]}
+            style={[
+              styles.iconOption,
+              isDark && styles.iconOptionDark,
+              isSelected && styles.iconOptionActive,
+            ]}
             onPress={() => onSelect(ic.name)}
           >
             <Ionicons
@@ -104,6 +114,7 @@ function IconSelector({
             <Text
               style={[
                 styles.iconLabel,
+                isDark && styles.iconLabelDark,
                 isSelected && { color: "#007AFF", fontWeight: "600" },
               ]}
             >
@@ -123,6 +134,8 @@ export const Subjects = ({
   onNavigateToRecientes,
   onNavigateToSubjectDetail,
 }: SubjectsProps) => {
+  const { isDark } = useTheme();
+
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -149,7 +162,11 @@ export const Subjects = ({
     buttons: AlertButton[];
   }>({ visible: false, title: "", message: "", buttons: [] });
 
-  const showAlert = (title: string, message: string, buttons?: AlertButton[]) => {
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: AlertButton[],
+  ) => {
     setCustomAlert({
       visible: true,
       title,
@@ -157,7 +174,8 @@ export const Subjects = ({
       buttons: buttons || [{ text: "OK" }],
     });
   };
-  const closeAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+  const closeAlert = () =>
+    setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -241,17 +259,21 @@ export const Subjects = ({
   const Header = () => (
     <View style={styles.headerContainer}>
       <View>
-        <Text style={styles.title}>Mis Materias</Text>
+        <Text style={[styles.title, isDark && styles.textDark]}>
+          Mis Materias
+        </Text>
         <Text style={styles.subtitle}>Organiza tu aprendizaje</Text>
       </View>
       <TouchableOpacity style={styles.searchButton}>
-        <Ionicons name="search" size={24} color="#333" />
+        <Ionicons name="search" size={24} color={isDark ? "#FFF" : "#333"} />
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.mainContainer}>
+    <SafeAreaView
+      style={[styles.mainContainer, isDark && styles.mainContainerDark]}
+    >
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -278,7 +300,9 @@ export const Subjects = ({
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Ionicons name="folder-open-outline" size={52} color="#D0D0D0" />
-              <Text style={styles.emptyTitle}>Sin materias</Text>
+              <Text style={[styles.emptyTitle, isDark && styles.textDark]}>
+                Sin materias
+              </Text>
               <Text style={styles.emptyText}>
                 Toca el botón + para crear tu primera materia.
               </Text>
@@ -311,7 +335,7 @@ export const Subjects = ({
       </TouchableOpacity>
 
       {/* Tab Bar */}
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, isDark && styles.tabBarDark]}>
         <TouchableOpacity
           style={styles.tabItem}
           onPress={onNavigateToRecording}
@@ -342,13 +366,17 @@ export const Subjects = ({
       {/* ── Modal: Crear materia ─────────────────────────────── */}
       <Modal visible={createModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Nueva materia</Text>
+          <View style={[styles.modalCard, isDark && styles.modalCardDark]}>
+            <View
+              style={[styles.modalHandle, isDark && styles.modalHandleDark]}
+            />
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+              Nueva materia
+            </Text>
 
             <Text style={styles.fieldLabel}>Nombre</Text>
             <TextInput
-              style={styles.fieldInput}
+              style={[styles.fieldInput, isDark && styles.fieldInputDark]}
               value={newName}
               onChangeText={setNewName}
               placeholder="Ej. Matemáticas, Historia..."
@@ -361,10 +389,12 @@ export const Subjects = ({
 
             <View style={styles.modalBtns}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={[styles.cancelBtn, isDark && styles.cancelBtnDark]}
                 onPress={() => setCreateModal(false)}
               >
-                <Text style={styles.cancelText}>Cancelar</Text>
+                <Text style={[styles.cancelText, isDark && styles.textDark]}>
+                  Cancelar
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -388,21 +418,27 @@ export const Subjects = ({
       {/* ── Modal: Opciones / Editar materia ────────────────── */}
       <Modal visible={optionsModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHandle} />
+          <View style={[styles.modalCard, isDark && styles.modalCardDark]}>
+            <View
+              style={[styles.modalHandle, isDark && styles.modalHandleDark]}
+            />
 
             {!editMode ? (
               <>
-                <Text style={styles.modalTitle}>{optionsTarget?.name}</Text>
+                <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+                  {optionsTarget?.name}
+                </Text>
                 <TouchableOpacity
-                  style={styles.optionRow}
+                  style={[styles.optionRow, isDark && styles.optionRowDark]}
                   onPress={() => setEditMode(true)}
                 >
                   <Ionicons name="pencil-outline" size={20} color="#007AFF" />
-                  <Text style={styles.optionText}>Editar materia</Text>
+                  <Text style={[styles.optionText, isDark && styles.textDark]}>
+                    Editar materia
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.optionRow}
+                  style={[styles.optionRow, isDark && styles.optionRowDark]}
                   onPress={handleDelete}
                 >
                   <Ionicons name="trash-outline" size={20} color="#FF3B30" />
@@ -411,18 +447,26 @@ export const Subjects = ({
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.cancelBtn, { marginTop: 12 }]}
+                  style={[
+                    styles.cancelBtn,
+                    { marginTop: 12 },
+                    isDark && styles.cancelBtnDark,
+                  ]}
                   onPress={() => setOptionsModal(false)}
                 >
-                  <Text style={styles.cancelText}>Cancelar</Text>
+                  <Text style={[styles.cancelText, isDark && styles.textDark]}>
+                    Cancelar
+                  </Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
-                <Text style={styles.modalTitle}>Editar materia</Text>
+                <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+                  Editar materia
+                </Text>
                 <Text style={styles.fieldLabel}>Nombre</Text>
                 <TextInput
-                  style={styles.fieldInput}
+                  style={[styles.fieldInput, isDark && styles.fieldInputDark]}
                   value={editName}
                   onChangeText={setEditName}
                   placeholder="Nombre de la materia"
@@ -433,10 +477,14 @@ export const Subjects = ({
                 <IconSelector selected={editIcon} onSelect={setEditIcon} />
                 <View style={styles.modalBtns}>
                   <TouchableOpacity
-                    style={styles.cancelBtn}
+                    style={[styles.cancelBtn, isDark && styles.cancelBtnDark]}
                     onPress={() => setEditMode(false)}
                   >
-                    <Text style={styles.cancelText}>Volver</Text>
+                    <Text
+                      style={[styles.cancelText, isDark && styles.textDark]}
+                    >
+                      Volver
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.saveBtn, editSaving && { opacity: 0.7 }]}
@@ -459,14 +507,27 @@ export const Subjects = ({
       {/* ── Modal: Custom Alert (Cross-Platform) ─────────────────────────── */}
       <Modal visible={customAlert.visible} transparent animationType="fade">
         <View style={styles.alertOverlay}>
-          <View style={styles.alertCard}>
-            <Text style={styles.alertTitle}>{customAlert.title}</Text>
-            <Text style={styles.alertMessage}>{customAlert.message}</Text>
-            <View style={styles.alertButtonContainer}>
+          <View style={[styles.alertCard, isDark && styles.modalCardDark]}>
+            <Text style={[styles.alertTitle, isDark && styles.textDark]}>
+              {customAlert.title}
+            </Text>
+            <Text style={[styles.alertMessage, isDark && { color: "#999" }]}>
+              {customAlert.message}
+            </Text>
+            <View
+              style={[
+                styles.alertButtonContainer,
+                isDark && { borderTopColor: "#38383A" },
+              ]}
+            >
               {customAlert.buttons.map((btn, idx) => (
                 <TouchableOpacity
                   key={idx}
-                  style={[styles.alertButton, idx > 0 && styles.alertButtonBorder]}
+                  style={[
+                    styles.alertButton,
+                    idx > 0 && styles.alertButtonBorder,
+                    idx > 0 && isDark && { borderLeftColor: "#38383A" },
+                  ]}
                   onPress={() => {
                     closeAlert();
                     if (btn.onPress) {
@@ -478,7 +539,8 @@ export const Subjects = ({
                     style={[
                       styles.alertButtonText,
                       btn.style === "cancel" && styles.alertButtonTextCancel,
-                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                      btn.style === "destructive" &&
+                        styles.alertButtonTextDestructive,
                     ]}
                   >
                     {btn.text}
@@ -727,4 +789,31 @@ const styles = StyleSheet.create({
   alertButtonText: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
   alertButtonTextCancel: { color: "#999", fontWeight: "400" },
   alertButtonTextDestructive: { color: "#FF3B30", fontWeight: "600" },
+
+  // Estilos Dark Mode
+  mainContainerDark: { backgroundColor: "#000000" },
+  textDark: { color: "#FFFFFF" },
+  cardDark: { backgroundColor: "#1C1C1E", shadowColor: "transparent" },
+  tabBarDark: { backgroundColor: "#1C1C1E", borderTopColor: "#38383A" },
+  modalCardDark: { backgroundColor: "#1C1C1E" },
+  modalHandleDark: { backgroundColor: "#38383A" },
+  fieldInputDark: {
+    backgroundColor: "#2C2C2E",
+    color: "#FFFFFF",
+    borderColor: "#38383A",
+  },
+  cancelBtnDark: {
+    borderColor: "#38383A",
+    backgroundColor: "transparent",
+  },
+  optionRowDark: {
+    borderBottomColor: "#38383A",
+  },
+  iconOptionDark: {
+    backgroundColor: "#1C1C1E",
+    borderColor: "#38383A",
+  },
+  iconLabelDark: {
+    color: "#FFFFFF",
+  },
 });

@@ -11,19 +11,21 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   ActivityIndicator,
   Modal,
   TextInput,
   Animated,
   Platform,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { useRecorder } from "../../hooks/useRecorder";
 import recordingApiService from "../../services/recordingApiService";
 import subjectService, { type Subject } from "../../services/subjectService";
+import { useTheme } from "./ThemeContext";
 
 type RecordingPageProps = {
   onNavigateToSubjects?: () => void;
@@ -49,6 +51,7 @@ export default function RecordingPage({
   onNavigateToSubjects,
   onNavigateToRecientes,
 }: RecordingPageProps) {
+  const { isDark } = useTheme();
   const {
     state,
     durationMillis,
@@ -344,12 +347,12 @@ export default function RecordingPage({
   const waveColor = isRecording ? "#007AFF" : isPaused ? "#FFB300" : "#D0D0D0";
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerTitle, isDark && styles.textDark]}>
               {isIdle
                 ? "Grabación"
                 : isRecording
@@ -375,7 +378,7 @@ export default function RecordingPage({
         </View>
 
         {/* Visualización */}
-        <View style={styles.vizCard}>
+        <View style={[styles.vizCard, isDark && styles.cardDark]}>
           <Text
             style={[
               styles.timeDisplay,
@@ -513,9 +516,16 @@ export default function RecordingPage({
       {/* ── Modal: Guardar grabación ─────────────────────────── */}
       <Modal visible={saveModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Guardar grabación</Text>
+          <View style={[styles.modalCard, isDark && styles.cardDark]}>
+            <View
+              style={[
+                styles.modalHandle,
+                isDark && { backgroundColor: "#38383A" },
+              ]}
+            />
+            <Text style={[styles.modalTitle, isDark && styles.textDark]}>
+              Guardar grabación
+            </Text>
             <Text style={styles.modalSub}>
               <Ionicons name="time-outline" size={13} color="#999" />{" "}
               {formatDuration(pendingResult?.durationMillis || 0)}
@@ -524,7 +534,7 @@ export default function RecordingPage({
             {/* Título */}
             <Text style={styles.fieldLabel}>Título</Text>
             <TextInput
-              style={styles.fieldInput}
+              style={[styles.fieldInput, isDark && styles.fieldInputDark]}
               value={recordingTitle}
               onChangeText={setRecordingTitle}
               placeholder="Nombre de la grabación"
@@ -552,7 +562,11 @@ export default function RecordingPage({
                   return (
                     <TouchableOpacity
                       key={s.id}
-                      style={[styles.chip, isSelected && styles.chipActive]}
+                      style={[
+                        styles.chip,
+                        isDark && styles.chipDark,
+                        isSelected && styles.chipActive,
+                      ]}
                       onPress={() => {
                         setSelectedSubject(s);
                         setCustomSubjectName("");
@@ -587,7 +601,11 @@ export default function RecordingPage({
             {/* Crear materia nueva */}
             <View style={styles.newSubjectRow}>
               <TextInput
-                style={[styles.fieldInput, styles.newSubjectInput]}
+                style={[
+                  styles.fieldInput,
+                  styles.newSubjectInput,
+                  isDark && styles.fieldInputDark,
+                ]}
                 value={customSubjectName}
                 onChangeText={(t) => {
                   setCustomSubjectName(t);
@@ -629,7 +647,13 @@ export default function RecordingPage({
             {/* Botones */}
             <View style={styles.modalBtns}>
               <TouchableOpacity
-                style={styles.discardBtn}
+                style={[
+                  styles.discardBtn,
+                  isDark && {
+                    backgroundColor: "#1C1C1E",
+                    borderColor: "#FF3B30",
+                  },
+                ]}
                 onPress={handleDiscard}
               >
                 <Ionicons name="trash-outline" size={15} color="#FF3B30" />
@@ -657,13 +681,13 @@ export default function RecordingPage({
       {/* ── Modal: Upload externo ────────────────────────────── */}
       <Modal visible={uploadModal} transparent animationType="fade">
         <View style={styles.uploadOverlay}>
-          <View style={styles.uploadCard}>
+          <View style={[styles.uploadCard, isDark && styles.cardDark]}>
             {uploading ? (
               <ActivityIndicator size="large" color="#007AFF" />
             ) : (
               <Ionicons name="checkmark-circle" size={52} color="#34C759" />
             )}
-            <Text style={styles.uploadTitle}>
+            <Text style={[styles.uploadTitle, isDark && styles.textDark]}>
               {uploading ? "Subiendo audio..." : "¡Listo!"}
             </Text>
             <Text style={styles.uploadText}>{uploadMessage}</Text>
@@ -674,16 +698,26 @@ export default function RecordingPage({
       {/* ── Modal: Custom Alert (Cross-Platform) ─────────────────────────── */}
       <Modal visible={customAlert.visible} transparent animationType="fade">
         <View style={styles.alertOverlay}>
-          <View style={styles.alertCard}>
-            <Text style={styles.alertTitle}>{customAlert.title}</Text>
-            <Text style={styles.alertMessage}>{customAlert.message}</Text>
-            <View style={styles.alertButtonContainer}>
+          <View style={[styles.alertCard, isDark && styles.cardDark]}>
+            <Text style={[styles.alertTitle, isDark && styles.textDark]}>
+              {customAlert.title}
+            </Text>
+            <Text style={[styles.alertMessage, isDark && { color: "#999" }]}>
+              {customAlert.message}
+            </Text>
+            <View
+              style={[
+                styles.alertButtonContainer,
+                isDark && { borderTopColor: "#38383A" },
+              ]}
+            >
               {customAlert.buttons.map((btn, idx) => (
                 <TouchableOpacity
                   key={idx}
                   style={[
                     styles.alertButton,
                     idx > 0 && styles.alertButtonBorder,
+                    idx > 0 && isDark && { borderLeftColor: "#38383A" },
                   ]}
                   onPress={() => {
                     closeAlert();
@@ -1056,4 +1090,18 @@ const styles = StyleSheet.create({
   alertButtonText: { fontSize: 16, fontWeight: "600", color: "#007AFF" },
   alertButtonTextCancel: { color: "#999", fontWeight: "400" },
   alertButtonTextDestructive: { color: "#FF3B30", fontWeight: "600" },
+
+  // Estilos Dark Mode
+  containerDark: { backgroundColor: "#000000" },
+  textDark: { color: "#FFFFFF" },
+  cardDark: { backgroundColor: "#1C1C1E", shadowColor: "transparent" },
+  fieldInputDark: {
+    backgroundColor: "#2C2C2E",
+    color: "#FFFFFF",
+    borderColor: "#38383A",
+  },
+  chipDark: {
+    backgroundColor: "#1C1C1E",
+    borderColor: "#38383A",
+  },
 });

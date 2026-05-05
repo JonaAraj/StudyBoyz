@@ -10,7 +10,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   FlatList,
   ActivityIndicator,
   Modal,
@@ -18,7 +17,9 @@ import {
   RefreshControl,
   Linking,
   Platform,
+  Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import subjectService, {
   type Subject,
@@ -86,7 +87,11 @@ export default function SubjectDetail({
     buttons: AlertButton[];
   }>({ visible: false, title: "", message: "", buttons: [] });
 
-  const showAlert = (title: string, message: string, buttons?: AlertButton[]) => {
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: AlertButton[],
+  ) => {
     setCustomAlert({
       visible: true,
       title,
@@ -94,7 +99,8 @@ export default function SubjectDetail({
       buttons: buttons || [{ text: "OK" }],
     });
   };
-  const closeAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+  const closeAlert = () =>
+    setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const load = useCallback(
     async (silent = false) => {
@@ -137,23 +143,6 @@ export default function SubjectDetail({
         },
       ],
     );
-  };
-
-  // ── Descargar Grabación ──────────────────────────────────────
-  const handleDownload = async (rec: SubjectRecording) => {
-    try {
-      const url = await recordingsService.getDownloadUrl(rec.id);
-      if (url) {
-        Linking.openURL(url);
-      } else {
-        Alert.alert("Error", "No se pudo generar el enlace de descarga.");
-      }
-    } catch (error) {
-      Alert.alert(
-        "Error",
-        "Ocurrió un problema al intentar descargar la grabación.",
-      );
-    }
   };
 
   // ── Editar ─────────────────────────────────────────────────
@@ -209,16 +198,21 @@ export default function SubjectDetail({
         // Solución Móvil (Expo FileSystem y Sharing)
         const FileSystem = await import("expo-file-system");
         const Sharing = await import("expo-sharing");
-        
-        const safeTitle = rec.title.replace(/[^a-z0-9]/gi, '_');
+
+        const safeTitle = rec.title.replace(/[^a-z0-9]/gi, "_");
         const fileUri = `${FileSystem.documentDirectory}${safeTitle}.m4a`;
-        
+
         const { uri } = await FileSystem.downloadAsync(url, fileUri);
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
-          await Sharing.shareAsync(uri, { dialogTitle: `Descargar ${rec.title}` });
+          await Sharing.shareAsync(uri, {
+            dialogTitle: `Descargar ${rec.title}`,
+          });
         } else {
-          showAlert("Error", "No se puede compartir o guardar en este dispositivo.");
+          showAlert(
+            "Error",
+            "No se puede compartir o guardar en este dispositivo.",
+          );
         }
       }
     } catch (error) {
@@ -283,11 +277,7 @@ export default function SubjectDetail({
               onPress={() => setTranscriptionRec(item)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons
-                name="document-text-outline"
-                size={14}
-                color={accent}
-              />
+              <Ionicons name="document-text-outline" size={14} color={accent} />
               <Text style={[styles.actionChipText, { color: accent }]}>
                 Ver
               </Text>
@@ -443,7 +433,10 @@ export default function SubjectDetail({
               {customAlert.buttons.map((btn, idx) => (
                 <TouchableOpacity
                   key={idx}
-                  style={[styles.alertButton, idx > 0 && styles.alertButtonBorder]}
+                  style={[
+                    styles.alertButton,
+                    idx > 0 && styles.alertButtonBorder,
+                  ]}
                   onPress={() => {
                     closeAlert();
                     if (btn.onPress) {
@@ -455,7 +448,8 @@ export default function SubjectDetail({
                     style={[
                       styles.alertButtonText,
                       btn.style === "cancel" && styles.alertButtonTextCancel,
-                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                      btn.style === "destructive" &&
+                        styles.alertButtonTextDestructive,
                     ]}
                   >
                     {btn.text}

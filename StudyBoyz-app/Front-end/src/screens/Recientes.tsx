@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   RefreshControl,
   Modal,
@@ -12,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import recordingsService from "../../services/recordingsService";
 import type { Recording } from "../../services/recordingsService";
@@ -55,7 +55,9 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Vista transcripción inline
-  const [transcriptionRec, setTranscriptionRec] = useState<Recording | null>(null);
+  const [transcriptionRec, setTranscriptionRec] = useState<Recording | null>(
+    null,
+  );
 
   // Custom Alert Modal (Reemplaza a Alert nativo)
   const [customAlert, setCustomAlert] = useState<{
@@ -65,7 +67,11 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
     buttons: AlertButton[];
   }>({ visible: false, title: "", message: "", buttons: [] });
 
-  const showAlert = (title: string, message: string, buttons?: AlertButton[]) => {
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: AlertButton[],
+  ) => {
     setCustomAlert({
       visible: true,
       title,
@@ -73,7 +79,8 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
       buttons: buttons || [{ text: "OK" }],
     });
   };
-  const closeAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+  const closeAlert = () =>
+    setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const fetchRecordings = useCallback(async () => {
     const data = await recordingsService.getAll();
@@ -141,16 +148,21 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
         // Solución Móvil (Expo FileSystem y Sharing)
         const FileSystem = await import("expo-file-system");
         const Sharing = await import("expo-sharing");
-        
-        const safeTitle = rec.title.replace(/[^a-z0-9]/gi, '_');
+
+        const safeTitle = rec.title.replace(/[^a-z0-9]/gi, "_");
         const fileUri = `${FileSystem.documentDirectory}${safeTitle}.m4a`;
-        
+
         const { uri } = await FileSystem.downloadAsync(url, fileUri);
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
-          await Sharing.shareAsync(uri, { dialogTitle: `Descargar ${rec.title}` });
+          await Sharing.shareAsync(uri, {
+            dialogTitle: `Descargar ${rec.title}`,
+          });
         } else {
-          showAlert("Error", "No se puede compartir o guardar en este dispositivo.");
+          showAlert(
+            "Error",
+            "No se puede compartir o guardar en este dispositivo.",
+          );
         }
       }
     } catch (error) {
@@ -196,7 +208,11 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
       <TranscriptionView
         recordingId={transcriptionRec.id}
         recordingTitle={transcriptionRec.title}
-        recordingSubject={(transcriptionRec as any).subjects?.name || (transcriptionRec as any).subject || ""}
+        recordingSubject={
+          (transcriptionRec as any).subjects?.name ||
+          (transcriptionRec as any).subject ||
+          ""
+        }
         transcriptStatus={(transcriptionRec as any).transcript_status}
         onBack={() => setTranscriptionRec(null)}
       />
@@ -206,7 +222,7 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
   // ── Render tarjeta ──────────────────────────────────────────
   const RecordingCard = ({ rec }: { rec: Recording }) => {
     const isDownloading = downloadingId === rec.id;
-    
+
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -254,7 +270,9 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
             onPress={() => openEdit(rec)}
           >
             <Ionicons name="pencil-outline" size={16} color="#007AFF" />
-            <Text style={[styles.actionText, { color: "#007AFF" }]}>Editar</Text>
+            <Text style={[styles.actionText, { color: "#007AFF" }]}>
+              Editar
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -408,7 +426,10 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
               {customAlert.buttons.map((btn, idx) => (
                 <TouchableOpacity
                   key={idx}
-                  style={[styles.alertButton, idx > 0 && styles.alertButtonBorder]}
+                  style={[
+                    styles.alertButton,
+                    idx > 0 && styles.alertButtonBorder,
+                  ]}
                   onPress={() => {
                     closeAlert();
                     if (btn.onPress) {
@@ -420,7 +441,8 @@ export default function Recientes({ onNavigateToRecording }: RecientesProps) {
                     style={[
                       styles.alertButtonText,
                       btn.style === "cancel" && styles.alertButtonTextCancel,
-                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                      btn.style === "destructive" &&
+                        styles.alertButtonTextDestructive,
                     ]}
                   >
                     {btn.text}

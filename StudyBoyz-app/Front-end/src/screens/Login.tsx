@@ -15,6 +15,7 @@ import {
   Alert,
 } from "react-native";
 import useAuth from "../../hooks/Useauth";
+import { useTheme } from "./ThemeContext";
 
 interface LoginProps {
   onLogin?: () => void; // ← coincide con App.tsx
@@ -22,6 +23,7 @@ interface LoginProps {
 }
 const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
   const { login, isLoading, error, clearError } = useAuth();
+  const { isDark } = useTheme();
 
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -46,13 +48,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, isDark && styles.containerDark]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
         {/* Título */}
-        <Text style={styles.title}>¡Bienvenido!</Text>
-        <Text style={styles.subtitle}>Inicia sesión en StudyBoyz</Text>
+        <Text style={[styles.title, isDark && styles.textDark]}>
+          ¡Bienvenido!
+        </Text>
+        <Text style={[styles.subtitle, isDark && styles.subtitleDark]}>
+          Inicia sesión en StudyBoyz
+        </Text>
 
         {/* Error message */}
         {error ? (
@@ -62,12 +68,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
         ) : null}
 
         {/* Formulario */}
-        <View style={styles.card}>
+        <View style={[styles.card, isDark && styles.cardDark]}>
           {/* Campo usuario/email */}
-          <View style={styles.inputWrapper}>
+          <View
+            style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+          >
             <Text style={styles.inputIcon}>👤</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDark && styles.inputDark]}
               placeholder="Usuario o Email"
               placeholderTextColor="#aaa"
               value={identifier}
@@ -79,10 +87,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
           </View>
 
           {/* Campo contraseña */}
-          <View style={styles.inputWrapper}>
+          <View
+            style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+          >
             <Text style={styles.inputIcon}>🔒</Text>
             <TextInput
-              style={[styles.input, styles.inputFlex]}
+              style={[
+                styles.input,
+                styles.inputFlex,
+                isDark && styles.inputDark,
+              ]}
               placeholder="Contraseña"
               placeholderTextColor="#aaa"
               value={password}
@@ -118,7 +132,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, onGoToRegister }) => {
 
         {/* Registro */}
         <TouchableOpacity onPress={onGoToRegister} style={styles.registerRow}>
-          <Text style={styles.registerText}>¿No tienes cuenta? </Text>
+          <Text style={[styles.registerText, isDark && styles.subtitleDark]}>
+            ¿No tienes cuenta?{" "}
+          </Text>
           <Text style={styles.registerLink}>Regístrate aquí</Text>
         </TouchableOpacity>
       </View>
@@ -237,6 +253,26 @@ const styles = StyleSheet.create({
     color: "#6b8de3",
     fontSize: 14,
     fontWeight: "600",
+  },
+  // Estilos Dark Mode
+  containerDark: {
+    backgroundColor: "#000000",
+  },
+  textDark: {
+    color: "#FFFFFF",
+  },
+  subtitleDark: {
+    color: "#8E8E93",
+  },
+  cardDark: {
+    backgroundColor: "#1C1C1E",
+  },
+  inputWrapperDark: {
+    backgroundColor: "#2C2C2E",
+    borderColor: "#38383A",
+  },
+  inputDark: {
+    color: "#FFFFFF",
   },
 });
 

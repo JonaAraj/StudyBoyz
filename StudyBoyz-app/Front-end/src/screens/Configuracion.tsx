@@ -1,18 +1,28 @@
+import React, { useState } from "react";
 import {
   View,
   ScrollView,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
+  Switch,
+  Linking,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTheme } from "./ThemeContext";
 
 type ConfiguracionProps = {
   onNavigateBack?: () => void;
 };
 
 const Configuracion = ({ onNavigateBack }: ConfiguracionProps) => {
+  // Obtenemos los valores del contexto global
+  const { theme, isDark, setTheme } = useTheme();
+
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
   const handleBackPress = () => {
     if (onNavigateBack) {
       onNavigateBack();
@@ -24,14 +34,28 @@ const Configuracion = ({ onNavigateBack }: ConfiguracionProps) => {
     console.log("Eliminar todos los datos");
   };
 
-  const handleSettingPress = (setting: string) => {
-    console.log(`Presionado: ${setting}`);
+  const toggleSection = (section: string) => {
+    setExpandedSection((prev) => (prev === section ? null : section));
   };
 
+  // Estilos dinámicos para modo oscuro
+  const containerStyle = [styles.container, isDark && styles.containerDark];
+  const headerStyle = [styles.stickyHeader, isDark && styles.stickyHeaderDark];
+  const titleStyle = [styles.headerTitle, isDark && styles.textDark];
+  const appNameStyle = [styles.appName, isDark && styles.textDark];
+  const sectionTitleStyle = [styles.sectionTitle, isDark && styles.textDark];
+  const cardStyle = [styles.card, isDark && styles.cardDark];
+  const itemTextStyle = [styles.itemText, isDark && styles.textDark];
+  const dividerStyle = [styles.itemDivider, isDark && styles.itemDividerDark];
+  const radioDividerStyle = [
+    styles.radioDivider,
+    isDark && styles.itemDividerDark,
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={containerStyle}>
       {/* Header */}
-      <View style={styles.stickyHeader}>
+      <View style={headerStyle}>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <MaterialCommunityIcons
             name="arrow-left"
@@ -42,7 +66,7 @@ const Configuracion = ({ onNavigateBack }: ConfiguracionProps) => {
           <Text style={styles.backButtonText}>Atrás</Text>
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Configuración</Text>
+        <Text style={titleStyle}>Configuración</Text>
 
         <View style={styles.spacer} />
       </View>
@@ -54,111 +78,278 @@ const Configuracion = ({ onNavigateBack }: ConfiguracionProps) => {
           <View style={styles.appIcon}>
             <MaterialCommunityIcons name="equalizer" size={36} color="white" />
           </View>
-          <Text style={styles.appName}>StudyBoys</Text>
+          <Text style={appNameStyle}>StudyBoys</Text>
           <Text style={styles.appVersion}>v1.2.0 (Build 45)</Text>
         </View>
 
         {/* General Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>General</Text>
-          <View style={styles.card}>
+          <Text style={sectionTitleStyle}>General</Text>
+          <View style={cardStyle}>
             <TouchableOpacity
               style={styles.item}
-              onPress={() => handleSettingPress("Calidad de Audio")}
-            >
-              <MaterialCommunityIcons
-                name="microphone"
-                size={24}
-                color="#000000"
-                style={styles.itemIcon}
-              />
-              <Text style={styles.itemText}>Calidad de Audio</Text>
-              <Text style={styles.itemRight}>Alta ▸</Text>
-            </TouchableOpacity>
-
-            <View style={styles.itemDivider} />
-
-            <TouchableOpacity
-              style={styles.item}
-              onPress={() => handleSettingPress("Notificaciones")}
+              onPress={() => toggleSection("Notificaciones")}
             >
               <MaterialCommunityIcons
                 name="bell"
                 size={24}
-                color="#000000"
+                color={isDark ? "#FFFFFF" : "#000000"}
                 style={styles.itemIcon}
               />
-              <Text style={styles.itemText}>Notificaciones</Text>
-              <Text style={styles.itemRight}>▸</Text>
+              <Text style={itemTextStyle}>Notificaciones</Text>
+              <Text style={styles.itemRight}>
+                {expandedSection === "Notificaciones" ? "▾" : "▸"}
+              </Text>
             </TouchableOpacity>
+            {expandedSection === "Notificaciones" && (
+              <View
+                style={[
+                  styles.expandedContent,
+                  isDark && styles.expandedContentDark,
+                ]}
+              >
+                <View style={styles.switchRow}>
+                  <Text
+                    style={[styles.expandedText, isDark && styles.textDark]}
+                  >
+                    Permitir notificaciones
+                  </Text>
+                  <Switch
+                    value={notificationsEnabled}
+                    onValueChange={setNotificationsEnabled}
+                    trackColor={{ false: "#767577", true: "#34C759" }}
+                  />
+                </View>
+                <Text style={styles.expandedSubText}>
+                  Recibe alertas sobre el estado de tus transcripciones y
+                  resúmenes.
+                </Text>
+              </View>
+            )}
 
-            <View style={styles.itemDivider} />
+            <View style={dividerStyle} />
 
             <TouchableOpacity
               style={styles.item}
-              onPress={() => handleSettingPress("Apariencia")}
+              onPress={() => toggleSection("Apariencia")}
             >
               <MaterialCommunityIcons
                 name="moon-waning-crescent"
                 size={24}
-                color="#000000"
+                color={isDark ? "#FFFFFF" : "#000000"}
                 style={styles.itemIcon}
               />
-              <Text style={styles.itemText}>Apariencia</Text>
-              <Text style={styles.itemRight}>Automático ▸</Text>
+              <Text style={itemTextStyle}>Apariencia</Text>
+              <Text style={styles.itemRight}>
+                {theme === "light"
+                  ? "Claro "
+                  : theme === "dark"
+                    ? "Oscuro "
+                    : "Auto "}
+                {expandedSection === "Apariencia" ? "▾" : "▸"}
+              </Text>
             </TouchableOpacity>
+            {expandedSection === "Apariencia" && (
+              <View
+                style={[
+                  styles.expandedContent,
+                  isDark && styles.expandedContentDark,
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.radioRow}
+                  onPress={() => setTheme("light")}
+                >
+                  <Text
+                    style={[styles.expandedText, isDark && styles.textDark]}
+                  >
+                    Claro
+                  </Text>
+                  {theme === "light" && (
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={20}
+                      color="#007AFF"
+                    />
+                  )}
+                </TouchableOpacity>
+                <View style={radioDividerStyle} />
+                <TouchableOpacity
+                  style={styles.radioRow}
+                  onPress={() => setTheme("dark")}
+                >
+                  <Text
+                    style={[styles.expandedText, isDark && styles.textDark]}
+                  >
+                    Oscuro
+                  </Text>
+                  {theme === "dark" && (
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={20}
+                      color="#007AFF"
+                    />
+                  )}
+                </TouchableOpacity>
+                <View style={radioDividerStyle} />
+                <TouchableOpacity
+                  style={styles.radioRow}
+                  onPress={() => setTheme("auto")}
+                >
+                  <Text
+                    style={[styles.expandedText, isDark && styles.textDark]}
+                  >
+                    Automático
+                  </Text>
+                  {theme === "auto" && (
+                    <MaterialCommunityIcons
+                      name="check"
+                      size={20}
+                      color="#007AFF"
+                    />
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 
         {/* Information Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Información</Text>
-          <View style={styles.card}>
+          <Text style={sectionTitleStyle}>Información</Text>
+          <View style={cardStyle}>
             <TouchableOpacity
               style={styles.item}
-              onPress={() => handleSettingPress("Acerca de StudyBoys")}
+              onPress={() => toggleSection("Acerca")}
             >
               <MaterialCommunityIcons
                 name="information"
                 size={24}
-                color="#000000"
+                color={isDark ? "#FFFFFF" : "#000000"}
                 style={styles.itemIcon}
               />
-              <Text style={styles.itemText}>Acerca de StudyBoys</Text>
-              <Text style={styles.itemRight}>▸</Text>
+              <Text style={itemTextStyle}>Acerca de StudyBoys</Text>
+              <Text style={styles.itemRight}>
+                {expandedSection === "Acerca" ? "▾" : "▸"}
+              </Text>
             </TouchableOpacity>
+            {expandedSection === "Acerca" && (
+              <View
+                style={[
+                  styles.expandedContent,
+                  isDark && styles.expandedContentDark,
+                ]}
+              >
+                <Text style={[styles.expandedText, isDark && styles.textDark]}>
+                  StudyBoys es un asistente de estudio diseñado para optimizar
+                  el aprendizaje mediante la grabación, transcripción y resumen
+                  de clases utilizando IA.
+                </Text>
+                <Text
+                  style={[
+                    styles.expandedText,
+                    { marginTop: 8 },
+                    isDark && styles.textDark,
+                  ]}
+                >
+                  Versión: 1.2.0 (Build 45)
+                </Text>
+              </View>
+            )}
 
-            <View style={styles.itemDivider} />
+            <View style={dividerStyle} />
 
             <TouchableOpacity
               style={styles.item}
-              onPress={() => handleSettingPress("Términos y Privacidad")}
+              onPress={() => toggleSection("Terminos")}
             >
               <MaterialCommunityIcons
-                name="lock"
+                name="file-document-outline"
                 size={24}
-                color="#000000"
+                color={isDark ? "#FFFFFF" : "#000000"}
                 style={styles.itemIcon}
               />
-              <Text style={styles.itemText}>Términos y Privacidad</Text>
-              <Text style={styles.itemRight}>▸</Text>
+              <Text style={itemTextStyle}>Términos y Privacidad</Text>
+              <Text style={styles.itemRight}>
+                {expandedSection === "Terminos" ? "▾" : "▸"}
+              </Text>
             </TouchableOpacity>
+            {expandedSection === "Terminos" && (
+              <View
+                style={[
+                  styles.expandedContent,
+                  isDark && styles.expandedContentDark,
+                ]}
+              >
+                <Text style={[styles.expandedText, isDark && styles.textDark]}>
+                  Al usar StudyBoys, aceptas que procesemos tus grabaciones de
+                  audio mediante servicios de terceros con el único fin de
+                  generar transcripciones y resúmenes. Tus datos no se comparten
+                  con anunciantes.
+                </Text>
+              </View>
+            )}
 
-            <View style={styles.itemDivider} />
+            <View style={dividerStyle} />
 
             <TouchableOpacity
               style={styles.item}
-              onPress={() => handleSettingPress("Soporte")}
+              onPress={() => toggleSection("Soporte")}
             >
               <MaterialCommunityIcons
                 name="lifebuoy"
                 size={24}
-                color="#000000"
+                color={isDark ? "#FFFFFF" : "#000000"}
                 style={styles.itemIcon}
               />
-              <Text style={styles.itemText}>Soporte</Text>
-              <Text style={styles.itemRight}>▸</Text>
+              <Text style={itemTextStyle}>Soporte</Text>
+              <Text style={styles.itemRight}>
+                {expandedSection === "Soporte" ? "▾" : "▸"}
+              </Text>
             </TouchableOpacity>
+            {expandedSection === "Soporte" && (
+              <View
+                style={[
+                  styles.expandedContent,
+                  isDark && styles.expandedContentDark,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.expandedText,
+                    { marginBottom: 12 },
+                    isDark && styles.textDark,
+                  ]}
+                >
+                  ¿Tienes problemas o sugerencias? Contáctanos por los
+                  siguientes medios:
+                </Text>
+                <TouchableOpacity
+                  style={styles.contactRow}
+                  onPress={() =>
+                    Linking.openURL("mailto:soporte@studyboyz.com")
+                  }
+                >
+                  <MaterialCommunityIcons
+                    name="email-outline"
+                    size={20}
+                    color="#007AFF"
+                  />
+                  <Text style={styles.linkText}>soporte@studyboyz.com</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.contactRow}
+                  onPress={() => Linking.openURL("tel:+12345678900")}
+                >
+                  <MaterialCommunityIcons
+                    name="phone-outline"
+                    size={20}
+                    color="#007AFF"
+                  />
+                  <Text style={styles.linkText}>+1 234 567 8900</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 
@@ -351,6 +542,70 @@ const styles = StyleSheet.create({
   },
   activeTabLabel: {
     color: "#007AFF",
+  },
+  // Estilos añadidos para las secciones desplegables y modo oscuro
+  containerDark: {
+    backgroundColor: "#000000",
+  },
+  stickyHeaderDark: {
+    backgroundColor: "#1C1C1E",
+    borderBottomColor: "#38383A",
+  },
+  textDark: {
+    color: "#FFFFFF",
+  },
+  cardDark: {
+    backgroundColor: "#1C1C1E",
+    borderColor: "#38383A",
+  },
+  itemDividerDark: {
+    backgroundColor: "#38383A",
+  },
+  expandedContent: {
+    backgroundColor: "#FAFAFA",
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E5EA",
+  },
+  expandedContentDark: {
+    backgroundColor: "#2C2C2E",
+    borderTopColor: "#38383A",
+  },
+  expandedText: {
+    fontSize: 15,
+    color: "#333333",
+    lineHeight: 22,
+  },
+  expandedSubText: {
+    fontSize: 13,
+    color: "#8E8E93",
+    marginTop: 6,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  radioRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+  },
+  radioDivider: {
+    height: 1,
+    backgroundColor: "#E5E5EA",
+  },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  linkText: {
+    fontSize: 16,
+    color: "#007AFF",
+    marginLeft: 12,
   },
 });
 

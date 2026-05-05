@@ -7,6 +7,8 @@ import Configuracion from "./Front-end/src/screens/Configuracion";
 import Recientes from "./Front-end/src/screens/Recientes";
 import SubjectDetail from "./Front-end/src/screens/SubjectDetail";
 import type { Subject as SubjectType } from "./Front-end/services/subjectService";
+import { ThemeProvider } from "./Front-end/src/screens/ThemeContext";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 type Screen =
   | "login"
@@ -35,44 +37,48 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      {currentScreen === "login" && (
-        <Login onLogin={() => navigateTo("recording")} />
-      )}
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <View style={styles.container}>
+          {currentScreen === "login" && (
+            <Login onLogin={() => navigateTo("recording")} />
+          )}
 
-      {currentScreen === "recording" && (
-        <RecordingPage
-          onNavigateToSubjects={() => navigateTo("subjects")}
-          onNavigateToRecientes={() => navigateTo("recientes")}
-        />
-      )}
+          {currentScreen === "recording" && (
+            <RecordingPage
+              onNavigateToSubjects={() => navigateTo("subjects")}
+              onNavigateToRecientes={() => navigateTo("recientes")}
+            />
+          )}
 
-      {currentScreen === "recientes" && (
-        <Recientes onNavigateToRecording={() => navigateTo("recording")} />
-      )}
+          {currentScreen === "recientes" && (
+            <Recientes onNavigateToRecording={() => navigateTo("recording")} />
+          )}
 
-      {currentScreen === "subjects" && (
-        <Subjects
-          onNavigateToRecording={() => navigateTo("recording")}
-          onNavigateToConfiguracion={() => navigateTo("configuracion")}
-          onNavigateToRecientes={() => navigateTo("recientes")}
-          onNavigateToSubjectDetail={navigateToSubjectDetail}
-        />
-      )}
+          {currentScreen === "subjects" && (
+            <Subjects
+              onNavigateToRecording={() => navigateTo("recording")}
+              onNavigateToConfiguracion={() => navigateTo("configuracion")}
+              onNavigateToRecientes={() => navigateTo("recientes")}
+              onNavigateToSubjectDetail={navigateToSubjectDetail}
+            />
+          )}
 
-      {currentScreen === "subjectDetail" && selectedSubject && (
-        <SubjectDetail
-          subject={selectedSubject}
-          subjectIndex={selectedSubjectIndex}
-          onBack={() => navigateTo("subjects")}
-          onNavigateToRecording={() => navigateTo("recording")}
-        />
-      )}
+          {currentScreen === "subjectDetail" && selectedSubject && (
+            <SubjectDetail
+              subject={selectedSubject}
+              subjectIndex={selectedSubjectIndex}
+              onBack={() => navigateTo("subjects")}
+              onNavigateToRecording={() => navigateTo("recording")}
+            />
+          )}
 
-      {currentScreen === "configuracion" && (
-        <Configuracion onNavigateBack={() => navigateTo("subjects")} />
-      )}
-    </View>
+          {currentScreen === "configuracion" && (
+            <Configuracion onNavigateBack={() => navigateTo("subjects")} />
+          )}
+        </View>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
