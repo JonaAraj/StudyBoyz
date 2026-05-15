@@ -2,11 +2,18 @@
   "name": "studyboyz-app",
   "version": "1.0.0",
   "main": "index.js",
+  "packageManager": "pnpm@9.0.0",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "backend": "node ./Back-end/server.js",
+    "backend:dev": "nodemon ./Back-end/server.js",
+    "build:android": "eas build --platform android --non-interactive",
+    "build:ios": "eas build --platform ios --non-interactive",
+    "build:web": "expo build:web",
+    "eas:login": "eas login"
   },
   "dependencies": {
     "@deepgram/sdk": "^5.0.0",
@@ -41,8 +48,14 @@
     "sequelize": "^6.37.7"
   },
   "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "@types/react-native": "^0.73.0",
     "nodemon": "^3.1.14",
     "typescript": "~5.9.2"
   }

@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: studyboyz-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install
+    startCommand: node ./Back-end/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
