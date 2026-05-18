@@ -33,11 +33,6 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
-// ── Rutas ────────────────────────────────────────────────────
-app.use("/api", authRoutes);
-app.use("/api", transcriptionRoutes);
-
 // Health check
 
 app.get("/health", (req, res) => res.json({ status: "ok", uptime: process.uptime() }));
