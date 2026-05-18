@@ -1,0 +1,14 @@
+Dentro de esta archivo contendra los logs tanto en render como de la situacion de Deepgram, y lo que nos dice la consola del DOM
+
+Actualmente, Deepgram no arroja logs por lo que me hace creer que no esta recibiendo peticiones desde la Deepgram API KEY,
+sin embargo, ya ha habido dos ocasiones, en las cuales se genera una api key nueva sin siquiera solicitarlo, eso ocurre al momento de ejecutar el servicio de transcripcion
+
+Por otro lado, Render al ejecutar el Back-end, arroja lo siguiente 
+
+❌ Error transcribiendo 0dc9ecb6-61c1-447f-9787-cc05ba051d91: Deepgram error: {"err_code":"INVALID_AUTH","err_msg":"Invalid credentials.","request_id":"019e3846-0e93-7a20-8d05-5fe7193ba6f7"}
+
+❌ Error transcribiendo 595d962d-1779-43e4-aee5-94db4c7e2a04: Deepgram error: {"err_code":"INVALID_AUTH","err_msg":"Invalid credentials.","request_id":"019e3848-a5c4-7e61-9b48-e2b0302a9fa2"}
+
+por lo que me hace creer que el back-end, especialmente en el useRecorder y transcriptionService hacen llamado a un en point con una Key invalida, por lo cual la configuracion en el back-end 
+de deepgram toma esto como una solicitud no authorizada, y la deniega
+

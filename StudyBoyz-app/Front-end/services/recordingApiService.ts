@@ -6,8 +6,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import subjectService, { type Subject } from "./subjectService";
-
-const API_BASE_URL = 'https://studyboyz.onrender.com/api';
+import API_BASE_URL from "./apiConfig";
 
 const getToken = async () => AsyncStorage.getItem("@studyboyz_token");
 

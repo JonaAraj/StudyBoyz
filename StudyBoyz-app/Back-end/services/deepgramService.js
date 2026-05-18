@@ -4,9 +4,30 @@
 
 const { createClient } = require("@deepgram/sdk");
 
+// Verificar que la API key existe al cargar el servicio
+if (!process.env.DEEPGRAM_API_KEY) {
+  console.error(
+    "❌ CRÍTICO: DEEPGRAM_API_KEY no está definida en variables de entorno.",
+  );
+  console.error(
+    "   Verifica que el archivo .env exista en Back-end/ y contenga DEEPGRAM_API_KEY.",
+  );
+  console.error("   Las transcripciones fallarán sin esta API key.");
+}
+
 const deepgramService = {
   async transcribeFromUrl(audioUrl, language = "es") {
-    const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
+    const apiKey = process.env.DEEPGRAM_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        "DEEPGRAM_API_KEY no definida. Verifica variables de entorno.",
+      );
+    }
+
+    console.log(
+      `📝 Transcribiendo desde URL con Deepgram (idioma: ${language})...`,
+    );
+    const deepgram = createClient(apiKey);
 
     const { result, error } = await deepgram.listen.prerecorded.transcribeUrl(
       { url: audioUrl },
@@ -21,7 +42,17 @@ const deepgramService = {
   },
 
   async transcribeFromBuffer(buffer, mimetype = "audio/m4a", language = "es") {
-    const deepgram = createClient(process.env.DEEPGRAM_API_KEY); // ← aquí adentro
+    const apiKey = process.env.DEEPGRAM_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        "DEEPGRAM_API_KEY no definida. Verifica variables de entorno.",
+      );
+    }
+
+    console.log(
+      `📝 Transcribiendo desde buffer (${mimetype}, idioma: ${language})...`,
+    );
+    const deepgram = createClient(apiKey);
 
     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
       buffer,

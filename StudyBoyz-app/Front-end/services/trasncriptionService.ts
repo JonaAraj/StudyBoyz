@@ -4,8 +4,7 @@
 // ============================================================
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_BASE_URL = 'https://studyboyz.onrender.com/api';
+import API_BASE_URL from "./apiConfig";
 
 export interface Transcription {
   id: string;

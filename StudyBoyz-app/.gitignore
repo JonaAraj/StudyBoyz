@@ -32,7 +32,10 @@ yarn-error.*
 
 # local env files
 .env
+<<<<<<< Updated upstream
 .env.local
+=======
+>>>>>>> Stashed changes
 .env*.local
 !.env.example
 

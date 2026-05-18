@@ -221,6 +221,24 @@ const transcribeInBackground = async (
   buffer = null,
 ) => {
   try {
+    // Verificar API KEY antes de procesar
+    const apiKey = process.env.DEEPGRAM_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        "DEEPGRAM_API_KEY no está configurada. Verifica el archivo .env",
+      );
+    }
+
+    console.log(`\n🔄 [${recordingId}] Iniciando transcripción...`);
+    console.log(`   - Usuario: ${userId}`);
+    console.log(`   - Tipo MIME: ${mimetype}`);
+    console.log(
+      `   - Modo: ${buffer ? "Buffer directo" : `URL firmada (${filePath})`}`,
+    );
+    console.log(
+      `   - API Key configurada: ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 4)}`,
+    );
+
     // Marcar como processing
     await Transcription.updateRecordingStatus(recordingId, "processing");
 
@@ -228,10 +246,12 @@ const transcribeInBackground = async (
 
     if (buffer) {
       // Audio recién subido — usar buffer directamente
+      console.log(`   - Transcribiendo desde buffer (${buffer.length} bytes)...`);
       transcript = await deepgramService.transcribeFromBuffer(buffer, mimetype);
     } else {
       // Grabación existente — obtener URL firmada
       const signedUrl = await getSignedUrl(filePath);
+      console.log(`   - Transcribiendo desde URL...`);
       transcript = await deepgramService.transcribeFromUrl(signedUrl);
     }
 
@@ -245,9 +265,13 @@ const transcribeInBackground = async (
     // Marcar como done
     await Transcription.updateRecordingStatus(recordingId, "done");
 
-    console.log(`✅ Transcripción completada para recording: ${recordingId}`);
+    console.log(
+      `✅ [${recordingId}] Transcripción completada (${transcript.length} caracteres)\n`,
+    );
   } catch (err) {
-    console.error(`❌ Error transcribiendo ${recordingId}:`, err.message);
+    console.error(`\n❌ Error transcribiendo ${recordingId}:`);
+    console.error(`   Mensaje: ${err.message}`);
+    console.error(`   Stack: ${err.stack}\n`);
     await Transcription.updateRecordingStatus(recordingId, "error").catch(
       () => {},
     );
