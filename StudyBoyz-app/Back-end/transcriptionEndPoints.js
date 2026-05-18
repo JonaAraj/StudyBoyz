@@ -97,13 +97,15 @@ const uploadAudioExternal = async (req, res) => {
     if (dbError) throw dbError;
 
     // 3. Transcribir en background (no bloquea la respuesta)
-    transcribeInBackground(
-      recording.id,
-      userId,
-      path,
-      req.file.mimetype,
-      req.file.buffer,
-    );
+    const bufferCopy = Buffer.from(req.file.buffer); // ← copia el buffer
+
+      transcribeInBackground(
+        recording.id,
+        userId,
+        path,
+        req.file.mimetype,
+        bufferCopy, // ← usa la copia
+      );
 
     return res.status(201).json({
       success: true,

@@ -4,6 +4,9 @@
 
 require("dotenv").config();
 
+const authRoutes = require("./endpoint");
+const transcriptionRoutes = require("./transcriptionEndPoints");
+
 // 🔧 SOLUCIÓN: Usar Google DNS si el DNS local no funciona
 const dns = require("dns");
 dns.setServers(["8.8.8.8", "8.8.4.4"]); // Google DNS
@@ -16,6 +19,9 @@ const authRoutes = require("./endpoint");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use("/api", authRoutes);
+app.use("/api", transcriptionRoutes);
+
 // ── Middlewares globales ─────────────────────────────────────
 app.use(
   cors({
@@ -27,8 +33,14 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
 // ── Rutas ────────────────────────────────────────────────────
 app.use("/api", authRoutes);
+app.use("/api", transcriptionRoutes);
+
+// Health check
+
+app.get("/health", (req, res) => res.json({ status: "ok", uptime: process.uptime() }));
 
 // Health check
 app.get("/", (req, res) => {

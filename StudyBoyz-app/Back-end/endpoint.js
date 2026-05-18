@@ -214,7 +214,8 @@ router.post('/recordings/save', requireAuth, upload.single('audio'), async (req,
     if (dbError) throw dbError;
 
     // Transcribir en background
-    transcribeInBackground(recording.id, userId, filePath, req.file.mimetype, req.file.buffer);
+    const bufferCopy = Buffer.from(req.file.buffer);
+    transcribeInBackground(recording.id, userId, filePath, req.file.mimetype, bufferCopy);
 
     return res.status(201).json({
       success: true,
@@ -275,7 +276,8 @@ router.post('/recordings/upload', requireAuth, upload.single('audio'), async (re
       .single();
     if (dbError) throw dbError;
 
-    transcribeInBackground(recording.id, userId, filePath, req.file.mimetype, req.file.buffer);
+    const bufferCopy = Buffer.from(req.file.buffer);
+    transcribeInBackground(recording.id, userId, filePath, req.file.mimetype, bufferCopy);
 
     return res.status(201).json({
       success: true,

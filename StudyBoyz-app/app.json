@@ -34,6 +34,7 @@
       "expo-sqlite"
     ],
     "extra": {
+      "API_BASE_URL": "https://studyboyz-1.onrender.com/api",
       "eas": {
         "projectId": "658cbee5-7fa4-43e6-bcba-774a777556f0"
       }
